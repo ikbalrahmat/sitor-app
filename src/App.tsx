@@ -31,7 +31,7 @@ function AppContent() {
             console.error("Gagal parse preferences", e);
           }
         } else {
-          isDark = user.preferences.darkMode;
+          isDark = (user.preferences as { darkMode?: boolean }).darkMode ?? false;
         }
       }
       if (isDark) {

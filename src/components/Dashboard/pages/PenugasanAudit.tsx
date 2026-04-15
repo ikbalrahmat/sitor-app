@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Award, Download, FileText, Upload } from 'lucide-react';
 
 // Tipe data untuk Status Kelayakan
@@ -102,7 +102,7 @@ const CircularProgress = ({ title, valueText, percentage }: {title: string, valu
   );
 };
 
-export default function PenugasanAudit({ onNavigateToProfile }: PenugasanAuditProps) {
+export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfile }: PenugasanAuditProps) {
   const [selectedAudit, setSelectedAudit] = useState<string>('Audit Operasional & TI');
   const [auditorsData, setAuditorsData] = useState<Record<string, Auditor[]>>(loadAuditorsData);
 

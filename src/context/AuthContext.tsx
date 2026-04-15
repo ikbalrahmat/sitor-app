@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import axios from 'axios';
 
 export type Role = 'Super Admin' | 'Admin' | 'User' | 'Manajemen';
@@ -8,6 +9,7 @@ export interface User {
   nama: string;
   email: string;
   role: Role;
+  preferences?: { darkMode?: boolean; emailNotif?: boolean; pushNotif?: boolean } | string;
 }
 
 interface AuthContextType {

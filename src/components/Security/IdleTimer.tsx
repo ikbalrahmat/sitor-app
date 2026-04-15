@@ -8,7 +8,7 @@ const IDLE_TIME_LIMIT = 15 * 60 * 1000;
 export default function IdleTimer({ children }: { children: React.ReactNode }) {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fungsi untuk logout otomatis
   const handleLogout = useCallback(() => {
