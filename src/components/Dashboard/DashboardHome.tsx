@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
 import { 
-  Users, Award, ShieldAlert, TrendingUp, 
-  BookOpen, AlertTriangle, CheckCircle2, Activity 
+  Users, Award, AlertTriangle, Activity, 
+  BookOpen, FileText, CheckCircle2, Bookmark
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+
+// Fungsi perhitungan expired sama seperti di RencanaKompetensi
+const calculateStatus = (dateString: string) => {
+  if (!dateString || dateString === '-') return '-';
+  const expDate = new Date(dateString);
+  if (isNaN(expDate.getTime())) return '-';
+  const today = new Date();
+  expDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'Expired';
+  if (diffDays <= 90) return 'Hampir Expired';
+  return 'Aktif';
+};
 
 export default function DashboardHome() {
   const { user } = useAuth();
@@ -12,16 +26,13 @@ export default function DashboardHome() {
   
   const [stats, setStats] = useState({
     totalAuditor: 0,
-    sertifikatAktif: 0,
-    sertifikatWarning: 0,
-    avgKompetensi: 0,
-    highRiskCount: 0,
-    totalPelatihan: 0,
+    totalSertifikat: 0,
+    totalSertifikatExpired: 0,
+    totalAdaFile: 0, 
+    totalDiklatBasic: 0
   });
 
-  const [riskDistribution, setRiskDistribution] = useState({
-    rendah: 0, sedang: 0, tinggi: 0
-  });
+  const [jenisProgramRecap, setJenisProgramRecap] = useState<{name: string, count: number}[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -30,80 +41,64 @@ export default function DashboardHome() {
         const token = localStorage.getItem('token');
         const config = { headers: { Authorization: `Bearer ${token}` } };
 
-        // Tarik semua data dari 4 pilar utama aplikasi
-        const [usersRes, diklatRes, penilaianRes, risikoRes] = await Promise.all([
+        const [usersRes, diklatRes] = await Promise.all([
           api.get('/users', config),
           api.get('/diklat', config),
-          api.get('/penilaian', config),
-          api.get('/matriks-risiko', config)
         ]);
 
         const usersData = usersRes.data;
         const diklatData = diklatRes.data;
-        const penilaianData = penilaianRes.data;
-        const risikoData = risikoRes.data;
 
-        // 1. Hitung Jumlah Auditor
-        const auditorCount = usersData.filter((u: any) => u.role === 'User').length;
+        // 1. Hitung Jumlah Auditor (Exclude Magang, PKWT, Outsourcing)
+        const excludedStatus = ['Magang', 'Pegawai Kontrak / PKWT', 'Outsourcing'];
+        const validUsers = usersData.filter((u: any) => 
+          (u.role === 'User' || u.role === 'Manajemen') && !excludedStatus.includes(u.status_kepegawaian)
+        );
+        const auditorCount = validUsers.length;
 
-        // 2. Hitung Status Sertifikat
-        let aktif = 0;
-        let warning = 0;
-        const today = new Date();
+        // 2 & 3. Hitung Sertifikat dari Diklat
+        let sertifikatCount = diklatData.length; 
+        let expiredCount = 0;
+        let adaFileCount = 0;
+        let diklatBasicCount = 0;
         
+        const programMap = new Map();
+
         diklatData.forEach((d: any) => {
-          if (d.tanggal_expired && d.tanggal_expired !== '-') {
-            const expDate = new Date(d.tanggal_expired);
-            const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays > 90) aktif++;
-            else warning++; // Expired atau Hampir Expired
+          // Hitung Status
+          if (calculateStatus(d.tanggal_expired) === 'Expired') {
+            expiredCount++;
+          }
+          
+          if (d.sertifikat_path) {
+            adaFileCount++;
+          }
+
+          if (d.jenis && d.jenis.toLowerCase() === 'diklat') {
+            diklatBasicCount++;
+          }
+
+          // Agregasi Jenis Program
+          const jenis = d.jenis && d.jenis !== '-' ? d.jenis : 'Lainnya';
+          if (programMap.has(jenis)) {
+            programMap.set(jenis, programMap.get(jenis) + 1);
+          } else {
+            programMap.set(jenis, 1);
           }
         });
 
-        // 3. Hitung Rata-rata Assessment (Daftar Kompetensi)
-        let totalNilai = 0;
-        let countNilai = 0;
-        
-        // Filter penilaian hanya untuk user yang datanya ditarik
-        const validUserIds = usersData.map((u: any) => u.id);
-        penilaianData.forEach((p: any) => {
-           if (validUserIds.includes(p.id)) {
-             totalNilai += (p.core + p.role + p.soft) / 3;
-             countNilai++;
-           }
-        });
-        const avgKomp = countNilai > 0 ? Math.round(totalNilai / countNilai) : 0;
+        // Convert map ke array object untuk di render
+        const recapArray = Array.from(programMap, ([name, count]) => ({ name, count }))
+                                .sort((a, b) => b.count - a.count); // urut terbanyak
 
-        // 4. Hitung Distribusi Risiko
-        let rRendah = 0, rSedang = 0, rTinggi = 0;
-        let highRiskUserCount = 0;
-
-        risikoData.forEach((r: any) => {
-          if (validUserIds.includes(r.id)) {
-            // Cek apakah punya risiko tinggi di salah satu area
-            if (r.opsTI === 'Tinggi' || r.keuanganFraud === 'Tinggi' || r.kepatuhan === 'Tinggi') {
-              highRiskUserCount++;
-            }
-            
-            // Hitung akumulasi area risiko
-            ['opsTI', 'keuanganFraud', 'kepatuhan'].forEach(area => {
-              if (r[area] === 'Rendah') rRendah++;
-              if (r[area] === 'Sedang') rSedang++;
-              if (r[area] === 'Tinggi') rTinggi++;
-            });
-          }
-        });
-
-        setRiskDistribution({ rendah: rRendah, sedang: rSedang, tinggi: rTinggi });
+        setJenisProgramRecap(recapArray);
         
         setStats({
           totalAuditor: auditorCount,
-          sertifikatAktif: aktif,
-          sertifikatWarning: warning,
-          avgKompetensi: avgKomp,
-          highRiskCount: highRiskUserCount,
-          totalPelatihan: diklatData.length,
+          totalSertifikat: sertifikatCount,
+          totalSertifikatExpired: expiredCount,
+          totalAdaFile: adaFileCount,
+          totalDiklatBasic: diklatBasicCount
         });
 
       } catch (error) {
@@ -115,11 +110,6 @@ export default function DashboardHome() {
 
     fetchDashboardData();
   }, []);
-
-  const totalRisikoArea = riskDistribution.rendah + riskDistribution.sedang + riskDistribution.tinggi;
-  const persenRendah = totalRisikoArea ? Math.round((riskDistribution.rendah / totalRisikoArea) * 100) : 0;
-  const persenSedang = totalRisikoArea ? Math.round((riskDistribution.sedang / totalRisikoArea) * 100) : 0;
-  const persenTinggi = totalRisikoArea ? Math.round((riskDistribution.tinggi / totalRisikoArea) * 100) : 0;
 
   if (isLoading) {
     return (
@@ -140,144 +130,104 @@ export default function DashboardHome() {
         <div className="relative z-10">
           <h1 className="text-3xl font-black mb-2 tracking-tight">Selamat Datang, {user?.nama}!</h1>
           <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
-            Ini adalah ringkasan Eksekutif (Dashboard) Sistem Kompetensi Auditor. Pantau kesiapan SDM, sertifikasi, dan peta risiko penugasan tim secara *real-time*.
+            Ini adalah ringkasan Eksekutif Sistem Kompetensi Auditor. Pantau ketersediaan SDM Auditor Tetap dan rekapitulasi keikutsertaan program kompetensi secara *real-time*.
           </p>
         </div>
       </div>
 
-      {/* KPI CARDS (KEY PERFORMANCE INDICATORS) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        
+      {/* KPI CARDS - Menjadi 3 Kotak Spesifik */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
-            <Users className="w-6 h-6" />
+            <Users className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Auditor</p>
-            <h2 className="text-2xl font-black text-gray-900">{stats.totalAuditor} <span className="text-sm font-medium text-gray-500">Personel</span></h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Auditor Tetap</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalAuditor} <span className="text-sm font-medium text-gray-500">Personel</span></h2>
           </div>
         </div>
 
         {/* Card 2 */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-green-50 text-green-600 rounded-2xl">
-            <TrendingUp className="w-6 h-6" />
+            <Award className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rata-Rata Nilai</p>
-            <h2 className="text-2xl font-black text-gray-900">{stats.avgKompetensi} <span className="text-sm font-medium text-gray-500">/ 100</span></h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Sertifikat / Program</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikat} <span className="text-sm font-medium text-gray-500">Record</span></h2>
           </div>
         </div>
 
         {/* Card 3 */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl">
-            <Award className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertifikat Aktif</p>
-            <h2 className="text-2xl font-black text-gray-900">{stats.sertifikatAktif} <span className="text-sm font-medium text-gray-500">Dokumen</span></h2>
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-red-50 text-red-600 rounded-2xl">
-            <AlertTriangle className="w-6 h-6" />
+            <AlertTriangle className="w-8 h-8" />
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertifikat Expired</p>
-            <h2 className="text-2xl font-black text-gray-900">{stats.sertifikatWarning} <span className="text-sm font-medium text-gray-500">Perlu Perpanjangan</span></h2>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatExpired} <span className="text-sm font-medium text-gray-500">Butuh Perpanjangan</span></h2>
           </div>
         </div>
-
       </div>
 
-      {/* CHARTS / PROGRESS BARS SECTION */}
+      {/* REKAPITULASI BAWAH */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* PROGRESS BAR: MATRIKS RISIKO */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <div className="flex items-center space-x-3 mb-6">
-            <ShieldAlert className="w-6 h-6 text-[#78231c]" />
-            <h2 className="text-lg font-bold text-gray-900">Distribusi Peta Risiko (Keseluruhan)</h2>
-          </div>
-
-          <div className="space-y-6">
-            {/* Risiko Rendah */}
-            <div>
-              <div className="flex justify-between text-sm font-bold mb-2">
-                <span className="text-green-700">Risiko Rendah (Aman)</span>
-                <span className="text-gray-600">{persenRendah}%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenRendah}%` }}></div>
+        {/* KOLOM KIRI: TOTAL DIKLAT & SERTIFIKAT TERLAMPIR */}
+        <div className="flex flex-col space-y-6">
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex-1">
+            <div className="flex items-center space-x-3 mb-6">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <h2 className="text-lg font-bold text-gray-900">Rekapitulasi Fisik & Kategori</h2>
+            </div>
+            
+            <div className="flex bg-blue-50/50 rounded-xl border border-blue-100 p-6 items-center space-x-6 mb-4">
+              <FileText className="w-12 h-12 text-blue-500" />
+              <div>
+                <h3 className="text-4xl font-black text-blue-700">{stats.totalAdaFile}</h3>
+                <p className="text-sm font-bold text-blue-800 uppercase tracking-wider mt-1">Total Record Bersertifikat (Upload)</p>
+                <p className="text-xs text-blue-600 mt-1">Data yang file sertifikat PDF/Gambarnya sudah dilampirkan.</p>
               </div>
             </div>
-
-            {/* Risiko Sedang */}
-            <div>
-              <div className="flex justify-between text-sm font-bold mb-2">
-                <span className="text-amber-600">Risiko Sedang (Perlu Perhatian)</span>
-                <span className="text-gray-600">{persenSedang}%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3">
-                <div className="bg-amber-400 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenSedang}%` }}></div>
+            
+            <div className="flex bg-emerald-50/50 rounded-xl border border-emerald-100 p-6 items-center space-x-6">
+              <BookOpen className="w-12 h-12 text-emerald-500" />
+              <div>
+                <h3 className="text-4xl font-black text-emerald-700">{stats.totalDiklatBasic}</h3>
+                <p className="text-sm font-bold text-emerald-800 uppercase tracking-wider mt-1">Total Khusus "Diklat"</p>
+                <p className="text-xs text-emerald-600 mt-1">Program yang di-input dengan jenis spesifik 'Diklat'.</p>
               </div>
             </div>
-
-            {/* Risiko Tinggi */}
-            <div>
-              <div className="flex justify-between text-sm font-bold mb-2">
-                <span className="text-red-600">Risiko Tinggi (Kritis)</span>
-                <span className="text-gray-600">{persenTinggi}%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-3">
-                <div className="bg-red-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${persenTinggi}%` }}></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 p-4 bg-red-50 rounded-xl border border-red-100 flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800 font-medium leading-relaxed">
-              Terdapat <b className="font-black text-red-900">{stats.highRiskCount} Auditor</b> yang memiliki setidaknya satu area dengan <b>Risiko Tinggi</b>. Hindari penugasan tanpa pendampingan senior.
-            </p>
           </div>
         </div>
 
-        {/* STATISTIK DIKLAT / RKT */}
+        {/* KOLOM KANAN: REKAP JENIS PROGRAM LAINNYA */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <div className="flex items-center space-x-3 mb-6">
-            <BookOpen className="w-6 h-6 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-900">Rekapitulasi Diklat & Sertifikasi</h2>
+          <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
+            <div className="flex items-center space-x-3">
+              <Bookmark className="w-6 h-6 text-[#0b3c5d]" />
+              <h2 className="text-lg font-bold text-gray-900">Rekapitulasi Jenis Program Lainnya</h2>
+            </div>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase">Kategori Input</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 h-[calc(100%-4rem)]">
-            <div className="bg-blue-50 rounded-2xl p-6 flex flex-col justify-center items-center text-center border border-blue-100">
-              <CheckCircle2 className="w-10 h-10 text-blue-500 mb-3" />
-              <h3 className="text-4xl font-black text-blue-900 mb-1">{stats.totalPelatihan}</h3>
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">Total Pelatihan /<br/>Sertifikasi Diikuti</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex-1 flex flex-col justify-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Assessment</p>
-                <div className="flex items-end space-x-2">
-                  <span className="text-2xl font-black text-slate-800">{stats.avgKompetensi >= 75 ? 'Tercapai' : 'Kurang'}</span>
+          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            {jenisProgramRecap.length > 0 ? (
+              jenisProgramRecap.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center p-4 bg-slate-50 hover:bg-blue-50/50 transition-colors rounded-xl border border-slate-100">
+                  <span className="font-bold text-gray-700 text-sm uppercase">{item.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-black text-[#0b3c5d]">{item.count}</span>
+                    <span className="text-[10px] uppercase font-bold text-gray-400">Record</span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500 mt-2 font-medium">Batas kelayakan rata-rata nilai kompetensi adalah 75.</p>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400 italic text-sm border-2 border-dashed border-gray-200 rounded-xl">
+                Belum ada rekaman jenis program kompetensi.
               </div>
-
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex-1 flex flex-col justify-center">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rasio Kesiapan</p>
-                <div className="flex items-end space-x-2">
-                  <span className="text-2xl font-black text-slate-800">{stats.totalAuditor > 0 ? Math.round((stats.sertifikatAktif / stats.totalAuditor)) : 0}</span>
-                  <span className="text-sm font-bold text-slate-500 mb-1">Sertifikat / Org</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
