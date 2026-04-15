@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, ShieldAlert, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, AlertCircle, ShieldAlert, RefreshCw, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LoginProps {
@@ -22,7 +22,6 @@ export default function Login({ onForgotPassword }: LoginProps) {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Fungsi untuk membuat soal matematika acak
   const generateCaptcha = () => {
     setCaptcha({
       num1: Math.floor(Math.random() * 10) + 1,
@@ -31,177 +30,211 @@ export default function Login({ onForgotPassword }: LoginProps) {
     setCaptchaAnswer('');
   };
 
-  // Jalankan generate CAPTCHA saat komponen pertama kali dimuat
   useEffect(() => {
     generateCaptcha();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 1. VALIDASI CAPTCHA SEBELUM HIT API (Requirement 3)
+
     if (parseInt(captchaAnswer) !== captcha.num1 + captcha.num2) {
-      setError('Verifikasi keamanan (CAPTCHA) salah. Silakan hitung kembali.');
-      generateCaptcha(); // Ganti soal jika salah
+      setError('Verifikasi keamanan salah. Silakan hitung kembali.');
+      generateCaptcha();
       return;
     }
 
     setIsLoading(true);
-    setError(''); // Reset error message
-    
+    setError('');
+
     try {
       const result = await login(email, password);
-      
+
       if (result && result.requiresPasswordChange) {
         navigate('/change-password');
       } else {
         navigate('/dashboard');
       }
-      
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat login.');
-      // Jika login gagal, reset CAPTCHA agar bot tidak bisa mencoba terus dengan captcha yang sama
-      generateCaptcha(); 
+      setError(err.message || 'Terjadi kesalahan saat masuk.');
+      generateCaptcha();
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-blue-600">
-          <div className="text-center mb-6">
-            <div className="flex justify-center mb-4">
-              {!imageError ? (
-                <img 
-                  src="/logo-sitor.png" 
-                  alt="Logo Si-Tor" 
-                  className="w-24 h-24 object-contain drop-shadow-md"
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
-                  <span className="text-3xl font-bold text-white">ST</span>
-                </div>
-              )}
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Login Si-Tor</h1>
-            <p className="text-gray-500 font-medium">Sistem Kompetensi Auditor</p>
+    <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4 font-sans">
+      
+      {/* Subtle decorative circles */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#0b3c5d]/5"></div>
+        <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full bg-[#0b3c5d]/5"></div>
+      </div>
+
+      <div className="w-full max-w-sm relative">
+        
+        {/* Logo / Brand area */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center mb-4">
+            {!imageError ? (
+              <img
+                src="/logo-sitor.png"
+                alt="Logo Si-Tor"
+                className="h-16 w-auto object-contain"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="w-14 h-14 bg-[#0b3c5d] rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-xl font-black text-white tracking-wider">ST</span>
+              </div>
+            )}
           </div>
+          <h1 className="text-2xl font-black text-[#0b3c5d] tracking-tight">SI-TOR</h1>
+          <p className="text-sm text-gray-500 mt-1 font-medium">Sistem Informasi Kompetensi Auditor</p>
+        </div>
 
-          {/* REQUIREMENT 5: PESAN PERINGATAN HUKUM/AKSES */}
-          <div className="mb-6 p-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-start space-x-3 text-xs leading-relaxed">
-            <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p>
-              <strong>Peringatan Keamanan:</strong> Sistem ini merupakan fasilitas terbatas. 
-              Hanya pengguna yang memiliki wewenang resmi yang diizinkan untuk masuk dan mengakses data di dalamnya.
-            </p>
-          </div>
+        {/* Main Card */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          
+          {/* Accent bar top */}
+          <div className="h-1 w-full bg-gradient-to-r from-[#0b3c5d] via-[#1d5b87] to-[#0b3c5d]"></div>
 
-          {error && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg flex items-center space-x-2 text-sm text-left animate-in fade-in duration-200">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="email">
-                Alamat Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-medium text-gray-800"
-                  placeholder="admin@sitor.com"
-                  required
-                />
-              </div>
+          <div className="p-8">
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-gray-900">Masuk ke Akun Anda</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Masukkan kredensial yang telah diberikan oleh Administrator.</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-medium text-gray-800"
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+            {/* Peringatan keamanan */}
+            <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 leading-relaxed">
+                <strong className="font-bold">Akses Terbatas.</strong> Hanya pengguna berwenang yang diizinkan masuk. Seluruh aktivitas dicatat.
+              </p>
             </div>
 
-            {/* REQUIREMENT 3: CAPTCHA SEDERHANA UNTUK CEGAH BRUTE FORCE BOT */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Verifikasi Keamanan
-              </label>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center justify-center bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-lg font-black text-gray-700 tracking-widest min-w-[100px] select-none">
-                  {captcha.num1} + {captcha.num2}
-                </div>
-                <button 
-                  type="button" 
-                  onClick={generateCaptcha}
-                  className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                  title="Ganti Soal"
-                >
-                  <RefreshCw className="w-5 h-5" />
-                </button>
-                <input
-                  type="number"
-                  value={captchaAnswer}
-                  onChange={(e) => setCaptchaAnswer(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-center text-lg"
-                  placeholder="Hasil?"
-                  required
-                />
-              </div>
-            </div>
-
-            {onForgotPassword && (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                >
-                  Lupa password?
-                </button>
+            {/* Error */}
+            {error && (
+              <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2.5">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <span className="text-xs text-red-600 font-medium">{error}</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm tracking-wide hover:bg-blue-600 focus:ring-4 focus:ring-blue-200 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center mt-2"
-            >
-              {isLoading ? 'Memproses Otentikasi...' : 'Masuk Dashboard'}
-            </button>
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider" htmlFor="email">
+                  Alamat Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-[#0b3c5d]/20 focus:border-[#0b3c5d] focus:bg-white transition-all"
+                    placeholder="nama@perusahaan.co.id"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider" htmlFor="password">
+                  Kata Sandi
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-800 outline-none focus:ring-2 focus:ring-[#0b3c5d]/20 focus:border-[#0b3c5d] focus:bg-white transition-all"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Lupa Password */}
+              {onForgotPassword && (
+                <div className="flex justify-end -mt-1">
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-xs text-[#0b3c5d] hover:underline font-semibold transition-colors"
+                  >
+                    Lupa kata sandi?
+                  </button>
+                </div>
+              )}
+
+              {/* CAPTCHA */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">
+                  Verifikasi Keamanan
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-shrink-0 flex items-center justify-center bg-[#0b3c5d]/5 border border-[#0b3c5d]/10 rounded-xl px-4 py-2.5 text-sm font-black text-[#0b3c5d] tracking-widest select-none min-w-[90px] text-center">
+                    {captcha.num1} + {captcha.num2}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateCaptcha}
+                    className="p-2.5 text-gray-400 hover:text-[#0b3c5d] hover:bg-gray-100 rounded-xl transition-all"
+                    title="Ganti Soal"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="number"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-center text-gray-800 outline-none focus:ring-2 focus:ring-[#0b3c5d]/20 focus:border-[#0b3c5d] focus:bg-white transition-all"
+                    placeholder="Jawaban?"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 bg-[#0b3c5d] hover:bg-[#0d4a72] text-white py-3 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md shadow-[#0b3c5d]/30 hover:shadow-lg hover:shadow-[#0b3c5d]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                    <span>Masuk ke Sistem</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
         </div>
 
-        <p className="text-center text-gray-500 text-xs font-medium mt-8">
-          © 2026 Si-Tor. Sistem Kompetensi Auditor. <br/>All access is monitored and logged.
+        {/* Footer */}
+        <p className="text-center text-gray-400 text-xs mt-6 leading-relaxed">
+          © 2026 SI-TOR · Sistem Informasi Kompetensi Auditor<br />
+          Seluruh akses dipantau dan dicatat secara otomatis.
         </p>
       </div>
     </div>
