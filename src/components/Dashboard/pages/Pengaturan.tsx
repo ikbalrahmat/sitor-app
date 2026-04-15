@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import api from '../../../lib/api';
+import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle, Eye, EyeOff, Camera, Trash2 } from 'lucide-react';
+import api, { STORAGE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function Pengaturan() {
@@ -14,6 +14,10 @@ export default function Pengaturan() {
   const [unitKerja, setUnitKerja] = useState('');
   const [np, setNp] = useState('');
   
+  // State untuk Foto Profil
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+
   // Dynamic Status Kepegawaian
   const [statusKepegawaian, setStatusKepegawaian] = useState('Pegawai Tetap');
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
@@ -53,6 +57,10 @@ export default function Pengaturan() {
           setUnitKerja(currentUserData.unit_kerja || '');
           setNp(currentUserData.np || '');
           
+          if (currentUserData.photo) {
+            setPhotoPreview(`${STORAGE_URL}/${currentUserData.photo}`);
+          }
+          
           const s = currentUserData.status_kepegawaian || 'Pegawai Tetap';
           if (optionsSet.has(s)) {
             setStatusKepegawaian(s);
@@ -72,6 +80,18 @@ export default function Pengaturan() {
     fetchUserData();
   }, [user]);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setMessage(null); 
     setIsLoading(true);
@@ -81,26 +101,33 @@ export default function Pengaturan() {
 
       const finalStatus = statusKepegawaian === 'Lainnya' ? customStatus : statusKepegawaian;
 
-      const payload: any = {
-        nama: nama,
-        email: email,
-        jabatan: jabatan,
-        instansi: instansi,
-        unit_kerja: unitKerja,
-        np: np,
-        status_kepegawaian: finalStatus,
-        role: user.role, // Pertahankan role asli
-      };
+      const payload = new FormData();
+      payload.append('nama', nama);
+      payload.append('email', email);
+      payload.append('jabatan', jabatan);
+      payload.append('instansi', instansi);
+      payload.append('unit_kerja', unitKerja);
+      payload.append('np', np);
+      payload.append('status_kepegawaian', finalStatus);
+      payload.append('role', user.role); // Pertahankan role asli
+      
+      if (photoFile) {
+        payload.append('photo', photoFile);
+      }
+      
+      payload.append('_method', 'PUT');
 
       if (oldPassword || newPassword) {
         if (!oldPassword || !newPassword) {
           throw new Error("Untuk mengganti password, harap isi Password Lama dan Password Baru.");
         }
-        payload.old_password = oldPassword;
-        payload.password = newPassword;
+        payload.append('old_password', oldPassword);
+        payload.append('password', newPassword);
       }
 
-      await api.put(`/users/${user.id}`, payload);
+      await api.post(`/users/${user.id}`, payload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
       // Update session login saat ini (khusus data primer)
       const currentSessionString = localStorage.getItem('authUser');
@@ -111,9 +138,13 @@ export default function Pengaturan() {
         localStorage.setItem('authUser', JSON.stringify(currentSession));
       }
 
-      setMessage({ type: 'success', text: 'Perubahan pengaturan dan profil berhasil disimpan!' });
+      setMessage({ type: 'success', text: 'Perubahan pengaturan dan profil berhasil disimpan! Memuat ulang dalam 2 detik...' });
       setOldPassword('');
       setNewPassword('');
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
 
     } catch (error: any) {
       console.error(error);
@@ -142,94 +173,141 @@ export default function Pengaturan() {
       <div className="space-y-6">
         {/* Profil Pengguna */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-colors duration-300">
-          <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-gray-100 ">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <UserIcon className="w-5 h-5 text-blue-600 " />
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <UserIcon className="w-5 h-5 text-blue-600 " />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 ">Profil Pengguna</h2>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 ">Profil Pengguna</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Nama Lengkap</label>
-              <input
-                type="text"
-                value={nama}
-                onChange={(e) => setNama(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="Masukkan nama lengkap"
-              />
+          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8">
+            {/* Kolom Upload Foto */}
+            <div className="flex flex-col items-center justify-start space-y-4">
+              <div className="relative group w-full flex justify-center">
+                <div className={`w-36 h-36 rounded-[2rem] flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all ${photoPreview ? '' : 'group-hover:border-blue-100 border-dashed border-slate-200'}`}>
+                  {photoPreview ? (
+                    <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                      <Camera className="w-8 h-8 mb-2" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-center">Unggah Foto Profil</span>
+                    </div>
+                  )}
+                  {photoPreview && (
+                    <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem] m-1">
+                      <Camera className="w-8 h-8 text-white mb-1" />
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">Ubah Foto</span>
+                    </div>
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleImageUpload} 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                  title="Klik untuk memilih foto"
+                />
+                {photoPreview && (
+                  <button 
+                    type="button" 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPhotoPreview(null); setPhotoFile(null); }} 
+                    className="absolute -top-3 right-0 z-20 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 hover:scale-110 transition-all" 
+                    title="Hapus Foto"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-gray-500 text-center max-w-[150px]">
+                Gunakan rasio foto 1:1. Maksimal ukuran file 2MB (.JPG, .PNG)
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="email@example.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">NP (Nomor Pegawai)</label>
-              <input
-                type="text"
-                value={np}
-                onChange={(e) => setNp(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="Masukkan nomor pegawai"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Jabatan</label>
-              <input
-                type="text"
-                value={jabatan}
-                onChange={(e) => setJabatan(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="Masukkan jabatan"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Unit Kerja</label>
-              <input
-                type="text"
-                value={unitKerja}
-                onChange={(e) => setUnitKerja(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="Masukkan unit kerja"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Instansi</label>
-              <input
-                type="text"
-                value={instansi}
-                onChange={(e) => setInstansi(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="Masukkan instansi"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Status Kepegawaian</label>
-              <select
-                value={statusKepegawaian}
-                onChange={(e) => setStatusKepegawaian(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-              >
-                {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                <option value="Lainnya">Lainnya (Input Manual)</option>
-              </select>
-              {statusKepegawaian === 'Lainnya' && (
+
+            {/* Kolom Form Kanan */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Nama Lengkap</label>
                 <input
                   type="text"
-                  value={customStatus}
-                  onChange={(e) => setCustomStatus(e.target.value)}
-                  className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-colors"
-                  placeholder="Ketik status kepegawaian..."
-                  required
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="Masukkan nama lengkap"
                 />
-              )}
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">NP (Nomor Pegawai)</label>
+                <input
+                  type="text"
+                  value={np}
+                  onChange={(e) => setNp(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="Masukkan nomor pegawai"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Jabatan</label>
+                <input
+                  type="text"
+                  value={jabatan}
+                  onChange={(e) => setJabatan(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="Masukkan jabatan"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Unit Kerja</label>
+                <input
+                  type="text"
+                  value={unitKerja}
+                  onChange={(e) => setUnitKerja(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="Masukkan unit kerja"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Instansi</label>
+                <input
+                  type="text"
+                  value={instansi}
+                  onChange={(e) => setInstansi(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="Masukkan instansi"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Status Kepegawaian</label>
+                <select
+                  value={statusKepegawaian}
+                  onChange={(e) => setStatusKepegawaian(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                >
+                  {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  <option value="Lainnya">Lainnya (Input Manual)</option>
+                </select>
+                {statusKepegawaian === 'Lainnya' && (
+                  <input
+                    type="text"
+                    value={customStatus}
+                    onChange={(e) => setCustomStatus(e.target.value)}
+                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-colors"
+                    placeholder="Ketik status kepegawaian..."
+                    required
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>
