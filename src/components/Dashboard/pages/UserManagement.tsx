@@ -274,7 +274,7 @@ export default function UserManagement() {
                     )}
                   </td>
                   <td className="px-6 py-4 flex justify-center space-x-2">
-                    {u.isLocked && currentUser?.role === 'Super Admin' && (
+                    {u.isLocked && (
                       <button 
                         onClick={() => handleUnlock(u.id, u.nama)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
