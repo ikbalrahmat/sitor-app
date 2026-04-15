@@ -15,6 +15,9 @@ export default function UserManagement() {
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [customStatus, setCustomStatus] = useState('');
 
+  const [unitKerjaOptions, setUnitKerjaOptions] = useState<string[]>([]);
+  const [customUnitKerja, setCustomUnitKerja] = useState('');
+
   // State untuk form
   const [formData, setFormData] = useState({
     id: '',
@@ -36,9 +39,11 @@ export default function UserManagement() {
       const response = await api.get('/users');
       
       const optionsSet = new Set<string>();
+      const unitSet = new Set<string>();
       
       const formattedUsers = response.data.map((u: any) => {
         if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
+        if (u.unit_kerja) unitSet.add(u.unit_kerja);
         return {
           id: u.id.toString(),
           nama: u.nama,
@@ -55,6 +60,7 @@ export default function UserManagement() {
       });
       
       setStatusOptions(Array.from(optionsSet));
+      setUnitKerjaOptions(Array.from(unitSet));
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Gagal mengambil data users:', error);
@@ -111,6 +117,7 @@ export default function UserManagement() {
     setIsLoading(true);
 
     const finalStatus = formData.statusKepegawaian === 'Lainnya' ? customStatus : formData.statusKepegawaian;
+    const finalUnitKerja = formData.unitKerja === 'Lainnya' ? customUnitKerja : formData.unitKerja;
     
     // Siapkan data yang dikirim ke Laravel
     const payload: any = {
@@ -118,7 +125,7 @@ export default function UserManagement() {
       email: formData.email,
       jabatan: formData.jabatan,
       instansi: formData.instansi,
-      unit_kerja: formData.unitKerja,
+      unit_kerja: finalUnitKerja,
       np: formData.np,
       status_kepegawaian: finalStatus,
       status_keaktifan: formData.statusKeaktifan,
@@ -346,7 +353,21 @@ export default function UserManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Unit Kerja</label>
-                  <input type="text" value={formData.unitKerja} onChange={(e) => setFormData({...formData, unitKerja: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <select value={formData.unitKerja} onChange={(e) => setFormData({...formData, unitKerja: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    <option value="" disabled>Pilih Unit Kerja</option>
+                    {unitKerjaOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    <option value="Lainnya">Lainnya (Input Manual)</option>
+                  </select>
+                  {formData.unitKerja === 'Lainnya' && (
+                    <input 
+                      type="text" 
+                      value={customUnitKerja} 
+                      onChange={(e) => setCustomUnitKerja(e.target.value)} 
+                      placeholder="Ketik unit kerja..." 
+                      className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" 
+                      required 
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">NP (Nomor Pegawai)</label>

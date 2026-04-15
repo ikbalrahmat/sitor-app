@@ -23,6 +23,9 @@ export default function Pengaturan() {
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [customStatus, setCustomStatus] = useState('');
 
+  const [unitKerjaOptions, setUnitKerjaOptions] = useState<string[]>([]);
+  const [customUnitKerja, setCustomUnitKerja] = useState('');
+
   // State untuk form Password
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -42,10 +45,13 @@ export default function Pengaturan() {
         
         // Buat dynamic options
         const optionsSet = new Set<string>();
+        const unitSet = new Set<string>();
         response.data.forEach((u: any) => {
           if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
+          if (u.unit_kerja) unitSet.add(u.unit_kerja);
         });
         setStatusOptions(Array.from(optionsSet));
+        setUnitKerjaOptions(Array.from(unitSet));
 
         const currentUserData = response.data.find((u: any) => u.id.toString() === user.id.toString());
         
@@ -54,7 +60,6 @@ export default function Pengaturan() {
           setEmail(currentUserData.email || '');
           setJabatan(currentUserData.jabatan || '');
           setInstansi(currentUserData.instansi || '');
-          setUnitKerja(currentUserData.unit_kerja || '');
           setNp(currentUserData.np || '');
           
           if (currentUserData.photo) {
@@ -67,6 +72,14 @@ export default function Pengaturan() {
           } else {
             setStatusKepegawaian('Lainnya');
             setCustomStatus(s);
+          }
+
+          const u = currentUserData.unit_kerja || '';
+          if (u === '' || unitSet.has(u)) {
+            setUnitKerja(u);
+          } else {
+            setUnitKerja('Lainnya');
+            setCustomUnitKerja(u);
           }
         } else {
           setNama(user.nama || '');
@@ -100,13 +113,14 @@ export default function Pengaturan() {
       if (!user) throw new Error("Sesi tidak valid.");
 
       const finalStatus = statusKepegawaian === 'Lainnya' ? customStatus : statusKepegawaian;
+      const finalUnitKerja = unitKerja === 'Lainnya' ? customUnitKerja : unitKerja;
 
       const payload = new FormData();
       payload.append('nama', nama);
       payload.append('email', email);
       payload.append('jabatan', jabatan);
       payload.append('instansi', instansi);
-      payload.append('unit_kerja', unitKerja);
+      payload.append('unit_kerja', finalUnitKerja);
       payload.append('np', np);
       payload.append('status_kepegawaian', finalStatus);
       payload.append('role', user.role); // Pertahankan role asli
@@ -269,13 +283,25 @@ export default function Pengaturan() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Unit Kerja</label>
-                <input
-                  type="text"
+                <select
                   value={unitKerja}
                   onChange={(e) => setUnitKerja(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                  placeholder="Masukkan unit kerja"
-                />
+                >
+                  <option value="" disabled>Pilih Unit Kerja</option>
+                  {unitKerjaOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  <option value="Lainnya">Lainnya (Input Manual)</option>
+                </select>
+                {unitKerja === 'Lainnya' && (
+                  <input
+                    type="text"
+                    value={customUnitKerja}
+                    onChange={(e) => setCustomUnitKerja(e.target.value)}
+                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-colors"
+                    placeholder="Ketik unit kerja..."
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Instansi</label>
