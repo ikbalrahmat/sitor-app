@@ -15,6 +15,7 @@ export default function DashboardHome() {
     case 'Super Admin':
       return <DashboardSuperAdmin />;
     case 'Manajemen':
+    case 'Admin':
       return <DashboardAdmin />;
     case 'User':
     default:
