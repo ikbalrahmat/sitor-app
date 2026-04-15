@@ -1,24 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Save, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
-
-// MOCK DATA: Dikeluarkan dari fungsi agar referensinya stabil dan tidak me-reset form saat Anda mengetik.
-const MOCK_USER = { 
-  id: 'admin-1', 
-  nama: 'Admin Sitor', 
-  email: 'admin@sitor.com',
-  jabatan: 'Ketua Tim Audit',
-  instansi: 'Kementerian X',
-  unitKerja: 'Biro Audit Operasional & TI',
-  np: '198001012005011001',
-  statusKepegawaian: 'Pegawai Tetap'
-};
-
-// MOCK useAuth untuk environment pratinjau di layar ini.
-// PENTING: Saat menyalin ke VS Code, HAPUS mock ini dan GUNAKAN import asli Anda:
-// import { useAuth } from '../../../context/AuthContext';
-const useAuth = () => {
-  return { user: MOCK_USER };
-};
+import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import api from '../../../lib/api';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function Pengaturan() {
   const { user } = useAuth();
@@ -33,118 +16,83 @@ export default function Pengaturan() {
   const [statusKepegawaian, setStatusKepegawaian] = useState('Pegawai Tetap');
   
   // State untuk form Password
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // State untuk Preferensi Notifikasi & Tampilan (Disembunyikan dari UI tapi tetap dijaga datanya)
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [pushNotif, setPushNotif] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  
   // State untuk notifikasi sukses/error
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Isi form secara otomatis dengan data user yang sedang login
+  // Ambil data user dari Backend
   useEffect(() => {
-    if (user) {
-      setNama(user.nama || '');
-      setEmail(user.email || '');
-      setJabatan(user.jabatan || '');
-      setInstansi(user.instansi || '');
-      setUnitKerja(user.unitKerja || '');
-      setNp(user.np || '');
-      setStatusKepegawaian(user.statusKepegawaian || 'Pegawai Tetap');
-
-      // Ambil preferensi dari Local Storage (jika sudah pernah disimpan)
-      const data = localStorage.getItem('userManagementData');
-      if (data) {
-        const users = JSON.parse(data);
-        const currentUserData = users.find((u: any) => u.id === user.id);
+    const fetchUserData = async () => {
+      if (!user) return;
+      try {
+        const response = await api.get('/users');
+        const currentUserData = response.data.find((u: any) => u.id.toString() === user.id.toString());
         
-        if (currentUserData && currentUserData.preferences) {
-          setEmailNotif(currentUserData.preferences.emailNotif ?? true);
-          setPushNotif(currentUserData.preferences.pushNotif ?? true);
-          
-          // Set Dark Mode jika preferensinya true
-          const isDark = currentUserData.preferences.darkMode ?? false;
-          setDarkMode(isDark);
-          if (isDark) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
+        if (currentUserData) {
+          setNama(currentUserData.nama || '');
+          setEmail(currentUserData.email || '');
+          setJabatan(currentUserData.jabatan || '');
+          setInstansi(currentUserData.instansi || '');
+          setUnitKerja(currentUserData.unit_kerja || '');
+          setNp(currentUserData.np || '');
+          setStatusKepegawaian(currentUserData.status_kepegawaian || 'Pegawai Tetap');
+        } else {
+          // Fallback
+          setNama(user.nama || '');
+          setEmail(user.email || '');
         }
+      } catch (error) {
+        console.error('Gagal mengambil detail profil user', error);
       }
-    }
-  }, [user?.id]);
+    };
 
-  const handleSave = () => {
-    setMessage(null); // Reset pesan
+    fetchUserData();
+  }, [user]);
+
+  const handleSave = async () => {
+    setMessage(null); 
+    setIsLoading(true);
 
     try {
-      const data = localStorage.getItem('userManagementData');
-      let users = data ? JSON.parse(data) : [];
-      let userIndex = users.findIndex((u: any) => u.id === user?.id);
+      if (!user) throw new Error("Sesi tidak valid.");
 
-      // Jika user tiruan ini belum ada di localStorage, kita buatkan
-      let currentUserData = userIndex !== -1 ? users[userIndex] : { ...user };
-
-      // LOGIKA GANTI PASSWORD
-      if (oldPassword || newPassword) {
-        if (!oldPassword || !newPassword) {
-          throw new Error('Untuk mengganti password, harap isi Password Lama dan Password Baru.');
-        }
-        
-        const actualOldPassword = currentUserData.password || 'password123';
-        if (oldPassword !== actualOldPassword) {
-          throw new Error('Password Lama yang Anda masukkan salah.');
-        }
-
-        currentUserData.password = newPassword;
-      }
-
-      // LOGIKA UPDATE PROFIL
-      currentUserData.nama = nama;
-      currentUserData.email = email;
-      currentUserData.jabatan = jabatan;
-      currentUserData.instansi = instansi;
-      currentUserData.unitKerja = unitKerja;
-      currentUserData.np = np;
-      currentUserData.statusKepegawaian = statusKepegawaian;
-
-      // LOGIKA UPDATE PREFERENSI (Notifikasi & Tampilan)
-      currentUserData.preferences = {
-        emailNotif: emailNotif,
-        pushNotif: pushNotif,
-        darkMode: darkMode
+      const payload: any = {
+        nama: nama,
+        email: email,
+        jabatan: jabatan,
+        instansi: instansi,
+        unit_kerja: unitKerja, // snake case u/ backend backend
+        np: np,
+        status_kepegawaian: statusKepegawaian,
+        role: user.role, // Pertahankan role asli
       };
 
-      // Simpan kembali ke master data di Local Storage
-      if (userIndex !== -1) {
-        users[userIndex] = currentUserData;
-      } else {
-        users.push(currentUserData);
+      if (newPassword && newPassword.trim() !== '') {
+        payload.password = newPassword;
       }
-      localStorage.setItem('userManagementData', JSON.stringify(users));
 
-      // Update session login saat ini
-      const currentSession = JSON.parse(localStorage.getItem('authUser') || '{}');
-      currentSession.nama = nama;
-      currentSession.email = email;
-      currentSession.jabatan = jabatan;
-      currentSession.instansi = instansi;
-      currentSession.unitKerja = unitKerja;
-      currentSession.np = np;
-      currentSession.statusKepegawaian = statusKepegawaian;
-      localStorage.setItem('authUser', JSON.stringify(currentSession));
+      await api.put(`/users/${user.id}`, payload);
 
-      // Berikan notifikasi sukses & kosongkan kolom password
+      // Update session login saat ini (khusus data primer)
+      const currentSessionString = localStorage.getItem('authUser');
+      if (currentSessionString) {
+        const currentSession = JSON.parse(currentSessionString);
+        currentSession.nama = nama;
+        currentSession.email = email;
+        localStorage.setItem('authUser', JSON.stringify(currentSession));
+      }
+
       setMessage({ type: 'success', text: 'Perubahan pengaturan dan profil berhasil disimpan!' });
-      setOldPassword('');
       setNewPassword('');
 
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
+      console.error(error);
+      const errorMsg = error.response?.data?.message || error.message || 'Terjadi kesalahan saat menyimpan.';
+      setMessage({ type: 'error', text: errorMsg });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -168,7 +116,7 @@ export default function Pengaturan() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-colors duration-300">
           <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-gray-100 ">
             <div className="p-2 bg-blue-50 rounded-lg">
-              <User className="w-5 h-5 text-blue-600 " />
+              <UserIcon className="w-5 h-5 text-blue-600 " />
             </div>
             <h2 className="text-lg font-bold text-gray-900 ">Profil Pengguna</h2>
           </div>
@@ -264,16 +212,6 @@ export default function Pengaturan() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Password Lama</label>
-              <input
-                type="password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Password Baru</label>
               <input
                 type="password"
@@ -290,10 +228,15 @@ export default function Pengaturan() {
         <div className="flex justify-end pt-4">
           <button 
             onClick={handleSave}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md shadow-blue-200 hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            disabled={isLoading}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md shadow-blue-200 hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
           >
-            <Save className="w-5 h-5" />
-            <span>Simpan Perubahan</span>
+            {isLoading ? <span>Menyimpan...</span> : (
+              <>
+                <Save className="w-5 h-5" />
+                <span>Simpan Perubahan</span>
+              </>
+            )}
           </button>
         </div>
       </div>
