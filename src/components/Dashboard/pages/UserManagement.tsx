@@ -23,6 +23,7 @@ export default function UserManagement() {
     statusKepegawaian: 'Pegawai Tetap',
     statusKeaktifan: 'Aktif',
     role: 'User',
+    password: '',
   });
 
   // MENGAMBIL DATA DARI DATABASE (LARAVEL API)
@@ -74,6 +75,7 @@ export default function UserManagement() {
         statusKepegawaian: userData.statusKepegawaian || 'Pegawai Tetap',
         statusKeaktifan: userData.statusKeaktifan || 'Aktif',
         role: userData.role,
+        password: '',
       });
     } else {
       setFormData({
@@ -87,6 +89,7 @@ export default function UserManagement() {
         statusKepegawaian: 'Pegawai Tetap',
         statusKeaktifan: 'Aktif',
         role: availableRoles[0] || 'User',
+        password: '',
       });
     }
     setIsModalOpen(true);
@@ -108,6 +111,10 @@ export default function UserManagement() {
       status_keaktifan: formData.statusKeaktifan,
       role: formData.role,
     };
+
+    if (modalMode === 'edit' && formData.password.trim() !== '') {
+      (payload as any).password = formData.password;
+    }
 
     try {
       if (modalMode === 'add') {
@@ -370,6 +377,14 @@ export default function UserManagement() {
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Password Default</label>
                     <input type="text" disabled value="Sitor123!@" className="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 outline-none font-mono cursor-not-allowed" />
                     <p className="text-xs text-gray-500 mt-1">User akan diminta mengganti password ini saat login pertama kali.</p>
+                  </div>
+                )}
+                
+                {modalMode === 'edit' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Update Password Baru (Opsional)</label>
+                    <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Kosongkan jika tidak ingin mengubah password" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-gray-400" />
+                    <p className="text-xs text-blue-600 mt-1">* Isi field ini hanya jika ingin mengganti password pengguna ini secara paksa.</p>
                   </div>
                 )}
               </form>
