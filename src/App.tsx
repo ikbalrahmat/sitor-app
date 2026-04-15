@@ -9,7 +9,6 @@ import Dashboard from './components/Dashboard/Dashboard';
 import DashboardHome from './components/Dashboard/DashboardHome';
 import UnitKompetensi from './components/Dashboard/pages/UnitKompetensi';
 import RencanaKompetensi from './components/Dashboard/pages/RencanaKompetensi';
-import MatriksRisiko from './components/Dashboard/pages/MatriksRisiko';
 import PenugasanAudit from './components/Dashboard/pages/PenugasanAudit';
 import UserManagement from './components/Dashboard/pages/UserManagement';
 import Pengaturan from './components/Dashboard/pages/Pengaturan';
@@ -83,7 +82,6 @@ function AppContent() {
           <Route path="dashboard" element={<DashboardHome />} />
           <Route path="unit-kompetensi" element={<UnitKompetensi />} />
           <Route path="rencana-kompetensi" element={<RencanaKompetensi />} />
-          <Route path="matriks-risiko" element={<MatriksRisiko />} />
           <Route path="penugasan-audit" element={<PenugasanAudit />} />
           <Route path="user-management" element={<UserManagement />} />
           <Route path="pengaturan" element={<Pengaturan />} />
