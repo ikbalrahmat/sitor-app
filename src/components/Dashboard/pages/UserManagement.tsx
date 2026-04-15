@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Edit, Trash2, Check, X, Unlock, Lock } from 'lucide-react';
+import { Users, UserPlus, Search, Edit, Trash2, Check, X, Unlock, Lock, Eye, EyeOff } from 'lucide-react';
 import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -9,7 +9,11 @@ export default function UserManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Untuk indikator loading
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [customStatus, setCustomStatus] = useState('');
 
   // State untuk form
   const [formData, setFormData] = useState({
@@ -30,20 +34,27 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       const response = await api.get('/users');
-      // Format data dari database ke format frontend
-      const formattedUsers = response.data.map((u: any) => ({
-        id: u.id.toString(), // Database id biasanya number
-        nama: u.nama,
-        email: u.email,
-        jabatan: u.jabatan,
-        instansi: u.instansi,
-        unitKerja: u.unit_kerja, // Map snake_case ke camelCase
-        np: u.np,
-        statusKepegawaian: u.status_kepegawaian,
-        statusKeaktifan: u.status_keaktifan ? 'Aktif' : 'Tidak Aktif',
-        role: u.role,
-        isLocked: u.is_locked, // Tambahkan isLocked dari backend
-      }));
+      
+      const optionsSet = new Set(['Pegawai Tetap', 'Pegawai Kontrak / PKWT', 'CPNS', 'PNS', 'Outsourcing', 'Magang']);
+      
+      const formattedUsers = response.data.map((u: any) => {
+        if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
+        return {
+          id: u.id.toString(),
+          nama: u.nama,
+          email: u.email,
+          jabatan: u.jabatan,
+          instansi: u.instansi,
+          unitKerja: u.unit_kerja,
+          np: u.np,
+          statusKepegawaian: u.status_kepegawaian,
+          statusKeaktifan: u.status_keaktifan ? 'Aktif' : 'Tidak Aktif',
+          role: u.role,
+          isLocked: u.is_locked,
+        };
+      });
+      
+      setStatusOptions(Array.from(optionsSet));
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Gagal mengambil data users:', error);
@@ -99,21 +110,23 @@ export default function UserManagement() {
     e.preventDefault();
     setIsLoading(true);
 
+    const finalStatus = formData.statusKepegawaian === 'Lainnya' ? customStatus : formData.statusKepegawaian;
+    
     // Siapkan data yang dikirim ke Laravel
-    const payload = {
+    const payload: any = {
       nama: formData.nama,
       email: formData.email,
       jabatan: formData.jabatan,
       instansi: formData.instansi,
       unit_kerja: formData.unitKerja,
       np: formData.np,
-      status_kepegawaian: formData.statusKepegawaian,
+      status_kepegawaian: finalStatus,
       status_keaktifan: formData.statusKeaktifan,
       role: formData.role,
     };
 
-    if (modalMode === 'edit' && formData.password.trim() !== '') {
-      (payload as any).password = formData.password;
+    if (formData.password && formData.password.trim() !== '') {
+      payload.password = formData.password;
     }
 
     try {
@@ -343,13 +356,19 @@ export default function UserManagement() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Status Kepegawaian</label>
                   <select value={formData.statusKepegawaian} onChange={(e) => setFormData({...formData, statusKepegawaian: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="Pegawai Tetap">Pegawai Tetap</option>
-                    <option value="Pegawai Kontrak / PKWT">Pegawai Kontrak / PKWT</option>
-                    <option value="CPNS">CPNS</option>
-                    <option value="PNS">PNS</option>
-                    <option value="Outsourcing">Outsourcing</option>
-                    <option value="Magang">Magang</option>
+                    {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    <option value="Lainnya">Lainnya (Input Manual)</option>
                   </select>
+                  {formData.statusKepegawaian === 'Lainnya' && (
+                    <input 
+                      type="text" 
+                      value={customStatus} 
+                      onChange={(e) => setCustomStatus(e.target.value)} 
+                      placeholder="Ketik status kepegawaian..." 
+                      className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" 
+                      required 
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -374,16 +393,25 @@ export default function UserManagement() {
 
                 {modalMode === 'add' && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Password Default</label>
-                    <input type="text" disabled value="Sitor123!@" className="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 outline-none font-mono cursor-not-allowed" />
-                    <p className="text-xs text-gray-500 mt-1">User akan diminta mengganti password ini saat login pertama kali.</p>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Password Baru <span className="text-red-500">*</span></label>
+                    <div className="relative">
+                      <input type={showPassword ? "text" : "password"} required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Ketik Password Minimum 6 Karakter" autoComplete="new-password" className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-gray-800" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
                 
                 {modalMode === 'edit' && (
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Update Password Baru (Opsional)</label>
-                    <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Kosongkan jika tidak ingin mengubah password" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-gray-400" />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Update Password Baru (Opsional)</label>
+                    <div className="relative">
+                      <input type={showPassword ? "text" : "password"} value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} placeholder="Kosongkan jika tidak ingin mengubah password" autoComplete="new-password" className="w-full px-4 py-2 pr-10 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-gray-400 text-gray-800" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <p className="text-xs text-blue-600 mt-1">* Isi field ini hanya jika ingin mengganti password pengguna ini secara paksa.</p>
                   </div>
                 )}

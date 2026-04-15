@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -13,10 +13,17 @@ export default function Pengaturan() {
   const [instansi, setInstansi] = useState('');
   const [unitKerja, setUnitKerja] = useState('');
   const [np, setNp] = useState('');
-  const [statusKepegawaian, setStatusKepegawaian] = useState('Pegawai Tetap');
   
+  // Dynamic Status Kepegawaian
+  const [statusKepegawaian, setStatusKepegawaian] = useState('Pegawai Tetap');
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [customStatus, setCustomStatus] = useState('');
+
   // State untuk form Password
+  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // State untuk notifikasi sukses/error
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -28,6 +35,14 @@ export default function Pengaturan() {
       if (!user) return;
       try {
         const response = await api.get('/users');
+        
+        // Buat dynamic options
+        const optionsSet = new Set(['Pegawai Tetap', 'Pegawai Kontrak / PKWT', 'CPNS', 'PNS', 'Outsourcing', 'Magang']);
+        response.data.forEach((u: any) => {
+          if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
+        });
+        setStatusOptions(Array.from(optionsSet));
+
         const currentUserData = response.data.find((u: any) => u.id.toString() === user.id.toString());
         
         if (currentUserData) {
@@ -37,9 +52,15 @@ export default function Pengaturan() {
           setInstansi(currentUserData.instansi || '');
           setUnitKerja(currentUserData.unit_kerja || '');
           setNp(currentUserData.np || '');
-          setStatusKepegawaian(currentUserData.status_kepegawaian || 'Pegawai Tetap');
+          
+          const s = currentUserData.status_kepegawaian || 'Pegawai Tetap';
+          if (optionsSet.has(s)) {
+            setStatusKepegawaian(s);
+          } else {
+            setStatusKepegawaian('Lainnya');
+            setCustomStatus(s);
+          }
         } else {
-          // Fallback
           setNama(user.nama || '');
           setEmail(user.email || '');
         }
@@ -58,18 +79,24 @@ export default function Pengaturan() {
     try {
       if (!user) throw new Error("Sesi tidak valid.");
 
+      const finalStatus = statusKepegawaian === 'Lainnya' ? customStatus : statusKepegawaian;
+
       const payload: any = {
         nama: nama,
         email: email,
         jabatan: jabatan,
         instansi: instansi,
-        unit_kerja: unitKerja, // snake case u/ backend backend
+        unit_kerja: unitKerja,
         np: np,
-        status_kepegawaian: statusKepegawaian,
+        status_kepegawaian: finalStatus,
         role: user.role, // Pertahankan role asli
       };
 
-      if (newPassword && newPassword.trim() !== '') {
+      if (oldPassword || newPassword) {
+        if (!oldPassword || !newPassword) {
+          throw new Error("Untuk mengganti password, harap isi Password Lama dan Password Baru.");
+        }
+        payload.old_password = oldPassword;
         payload.password = newPassword;
       }
 
@@ -85,6 +112,7 @@ export default function Pengaturan() {
       }
 
       setMessage({ type: 'success', text: 'Perubahan pengaturan dan profil berhasil disimpan!' });
+      setOldPassword('');
       setNewPassword('');
 
     } catch (error: any) {
@@ -189,13 +217,19 @@ export default function Pengaturan() {
                 onChange={(e) => setStatusKepegawaian(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
               >
-                <option value="Pegawai Tetap">Pegawai Tetap</option>
-                <option value="Pegawai Kontrak / PKWT">Pegawai Kontrak / PKWT</option>
-                <option value="CPNS">CPNS</option>
-                <option value="PNS">PNS</option>
-                <option value="Outsourcing">Outsourcing</option>
-                <option value="Magang">Magang</option>
+                {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                <option value="Lainnya">Lainnya (Input Manual)</option>
               </select>
+              {statusKepegawaian === 'Lainnya' && (
+                <input
+                  type="text"
+                  value={customStatus}
+                  onChange={(e) => setCustomStatus(e.target.value)}
+                  className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-colors"
+                  placeholder="Ketik status kepegawaian..."
+                  required
+                />
+              )}
             </div>
           </div>
         </div>
@@ -208,18 +242,48 @@ export default function Pengaturan() {
             </div>
             <h2 className="text-lg font-bold text-gray-900 ">Keamanan (Ganti Password)</h2>
           </div>
-          <p className="text-sm text-gray-500 mb-6 italic">Kosongkan kolom ini jika tidak ingin mengubah password.</p>
+          <p className="text-sm text-gray-500 mb-6 italic">Biarkan kosong jika tidak ingin mengubah password.</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Password Lama</label>
+              <div className="relative">
+                <input
+                  type={showOldPassword ? "text" : "password"}
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                >
+                  {showOldPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">Password Baru</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>

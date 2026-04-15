@@ -30,7 +30,6 @@ const menuGroups = [
     items: [
       { id: 'unit-kompetensi', label: 'Profil Kompetensi', icon: BookOpen },
       { id: 'rencana-kompetensi', label: 'Perencanaan Kompetensi', icon: ClipboardList },
-      { id: 'matriks-risiko', label: 'Matriks Risiko', icon: ShieldAlert },
       { id: 'penugasan-audit', label: 'Penugasan Audit', icon: ClipboardCheck },
     ]
   },
@@ -65,8 +64,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
       
       if (user?.role === 'Manajemen') {
-        // Manajemen (Viewer) -> Lihat Dashboard, Profil, Penilaian, Matriks, dan Penugasan
-        return ['dashboard', 'unit-kompetensi', 'matriks-risiko', 'penugasan-audit'].includes(item.id);
+        // Manajemen (Viewer) -> Lihat Dashboard, Profil, Penilaian, dan Penugasan
+        return ['dashboard', 'unit-kompetensi', 'penugasan-audit'].includes(item.id);
       }
       
       if (user?.role === 'User') {
