@@ -37,7 +37,7 @@ export default function Pengaturan() {
         const response = await api.get('/users');
         
         // Buat dynamic options
-        const optionsSet = new Set(['Pegawai Tetap', 'Pegawai Kontrak / PKWT', 'CPNS', 'PNS', 'Outsourcing', 'Magang']);
+        const optionsSet = new Set<string>();
         response.data.forEach((u: any) => {
           if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
         });

@@ -35,7 +35,7 @@ export default function UserManagement() {
     try {
       const response = await api.get('/users');
       
-      const optionsSet = new Set(['Pegawai Tetap', 'Pegawai Kontrak / PKWT', 'CPNS', 'PNS', 'Outsourcing', 'Magang']);
+      const optionsSet = new Set<string>();
       
       const formattedUsers = response.data.map((u: any) => {
         if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
