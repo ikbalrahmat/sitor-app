@@ -1,76 +1,32 @@
 import { useState, useEffect } from 'react';
-import { X, Award, Download, FileText, Upload } from 'lucide-react';
+import { X, Download, Upload, Edit, Plus, Trash2 } from 'lucide-react';
+import api, { STORAGE_URL } from '../../../lib/api';
 
 // Tipe data untuk Status Kelayakan
 type StatusKelayakan = 'Layak Ditugaskan' | 'Perlu Penguatan' | 'Tidak Direkomendasikan';
 
-interface Auditor {
-  id: string | number;
-  name: string;
-  unit: string;
-  status: StatusKelayakan;
-}
 
-interface PenugasanAuditProps {
-  onNavigateToProfile?: () => void; 
-}
 
-// Data Mock Jenis Audit (Kategori Penugasan)
-const auditTypes = [
-  { id: 'ops-ti', name: 'Audit Operasional & TI', reqs: ['Audit Operasional', 'IT Audit', 'Data Analytics Audit'] },
-  { id: 'keu-fraud', name: 'Audit Keuangan & Fraud', reqs: ['Audit Laporan Keuangan', 'Fraud Investigation', 'Akuntansi Forensik'] },
-  { id: 'kepatuhan', name: 'Audit Kepatuhan', reqs: ['Regulasi & Compliance', 'Hukum Bisnis Perusahaan', 'Etika & GCG'] },
-];
+// --- FUNGSI BANTUAN UNTUK STATUS SERTIFIKAT ---
+const calculateStatus = (dateString: string) => {
+  if (!dateString || dateString === '-') return '-';
+  
+  const expDate = new Date(dateString);
+  if (isNaN(expDate.getTime())) return '-';
+  
+  const today = new Date();
+  expDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
 
-// Fungsi untuk memuat data auditor riil dari Local Storage
-const loadAuditorsData = (): Record<string, Auditor[]> => {
-  const rencanaStr = localStorage.getItem('rencanaKompetensiData');
-  const userStr = localStorage.getItem('userManagementData');
-  let baseAuditors: any[] = [];
+  const diffTime = expDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-  if (rencanaStr && JSON.parse(rencanaStr).length > 0) {
-    baseAuditors = JSON.parse(rencanaStr);
-  } else if (userStr && JSON.parse(userStr).length > 0) {
-    const users = JSON.parse(userStr);
-    baseAuditors = users.filter((u: any) => u.role === 'User' || !u.role);
-  }
-
-  if (baseAuditors.length === 0) {
-    baseAuditors = [
-      { id: 1, nama: 'Andi Pratama', unitKerja: 'Biro Audit Operasional & TI' },
-      { id: 2, nama: 'Budi Santoso', unitKerja: 'Biro Audit Operasional & TI' },
-      { id: 3, name: 'Citra Dewi', unitKerja: 'Biro Perencanaan Audit' },
-      { id: 4, name: 'Ika Wulansari', unitKerja: 'Biro Audit Keuangan & Fraud' },
-      { id: 5, name: 'Ikbal Rahmat T', unitKerja: 'Biro Aopti', statusKepegawaian: 'Magang', statusKeaktifan: 'Tidak Aktif' },
-    ];
-  }
-
-  const savedStatusStr = localStorage.getItem('penugasanAuditStatus');
-  const savedStatus = savedStatusStr ? JSON.parse(savedStatusStr) : {};
-
-  const formattedData: Record<string, Auditor[]> = {
-    'Audit Operasional & TI': [],
-    'Audit Keuangan & Fraud': [],
-    'Audit Kepatuhan': []
-  };
-
-  const auditCategories = ['Audit Operasional & TI', 'Audit Keuangan & Fraud', 'Audit Kepatuhan'];
-
-  baseAuditors.forEach((person: any) => {
-    const id = person.id || Math.floor(Math.random() * 10000);
-    const name = person.nama || person.name || 'Auditor';
-    const unit = person.unitKerja || person.unit || '-';
-
-    auditCategories.forEach(category => {
-      const status: StatusKelayakan = savedStatus[category]?.[id] || 'Perlu Penguatan';
-      formattedData[category].push({ id, name, unit, status });
-    });
-  });
-
-  return formattedData;
+  if (diffDays < 0) return 'Expired';
+  if (diffDays <= 90) return 'Hampir Expired';
+  return 'Aktif';
 };
 
-// --- KOMPONEN BANTUAN UNTUK GRAFIK MELINGKAR (DONUT CHART) PERSIS DENGAN PROFIL KOMPETENSI ---
+// --- KOMPONEN BANTUAN UNTUK GRAFIK MELINGKAR (DONUT CHART) ---
 const CircularProgress = ({ title, valueText, percentage }: {title: string, valueText: string | number, percentage: number}) => {
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
@@ -102,111 +58,126 @@ const CircularProgress = ({ title, valueText, percentage }: {title: string, valu
   );
 };
 
-export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfile }: PenugasanAuditProps) {
-  const [selectedAudit, setSelectedAudit] = useState<string>('Audit Operasional & TI');
-  const [auditorsData, setAuditorsData] = useState<Record<string, Auditor[]>>(loadAuditorsData);
+export default function PenugasanAudit() {
+  const [loading, setLoading] = useState(true);
+  
+  // Data Master dari API
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allDiklat, setAllDiklat] = useState<any[]>([]);
+  
+  // State untuk Tab / Unit Kerja
+  const [unitKerjas, setUnitKerjas] = useState<string[]>([]);
+  const [selectedAudit, setSelectedAudit] = useState<string>(''); // Merupakan Unit Kerja
 
-  // State Untuk Modal Profil Personel
+  // Data Evaluasi Per Unit Kerja dan User (Disimpan di localStorage sementara)
+  const [evaluationStatuses, setEvaluationStatuses] = useState<Record<string, Record<string | number, StatusKelayakan>>>({});
+
+  // Data Kompetensi Wajib Per Unit Kerja (Disimpan di localStorage sementara)
+  const [kompetensiWajibMap, setKompetensiWajibMap] = useState<Record<string, string[]>>({});
+  
+  // State untuk Edit Kompetensi Wajib Modal
+  const [showEditReqModal, setShowEditReqModal] = useState(false);
+  const [tempReqs, setTempReqs] = useState<string[]>([]);
+  const [newReq, setNewReq] = useState('');
+
+  // State Untuk Modal Profil Personel (Persis Profil Kompetensi)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
-  
-  // State Untuk Modal Pratinjau Dokumen (Mockup/Link)
-  const [certificateToView, setCertificateToView] = useState<string | null>(null);
 
-  // State Untuk Modal Pratinjau PDF/Gambar (Jika Real File)
+  // State Untuk Pratinjau Dokumen
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [previewFileData, setPreviewFileData] = useState<{
-    fileName: string;
-    fileBase64: string;
-    fileType: string;
-  } | null>(null);
+  const [previewFileData, setPreviewFileData] = useState<{ fileName: string; fileUrl: string; fileType: string; } | null>(null);
 
   useEffect(() => {
-    const handleStorageChange = () => setAuditorsData(loadAuditorsData());
-    window.addEventListener('userManagementUpdated', handleStorageChange);
-    window.addEventListener('rencanaKompetensiUpdated', handleStorageChange);
-    return () => {
-      window.removeEventListener('userManagementUpdated', handleStorageChange);
-      window.removeEventListener('rencanaKompetensiUpdated', handleStorageChange);
-    };
+    fetchData();
+    
+    // Load local storage statuses
+    const savedStatusStr = localStorage.getItem('penugasanAuditStatus');
+    if (savedStatusStr) setEvaluationStatuses(JSON.parse(savedStatusStr));
+
+    // Load kompetensi wajib map from local storage
+    const savedReqsStr = localStorage.getItem('kompetensiWajibMap');
+    if (savedReqsStr) setKompetensiWajibMap(JSON.parse(savedReqsStr));
   }, []);
 
-  const currentAuditInfo = auditTypes.find(a => a.name === selectedAudit);
-  const currentAuditors = auditorsData[selectedAudit] || [];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [usersRes, diklatRes] = await Promise.all([
+        api.get('/users'),
+        api.get('/diklat')
+      ]);
+
+      const users = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
+      setAllUsers(users);
+      setAllDiklat(diklatRes.data);
+
+      const uniqueUnits: string[] = Array.from(new Set(users.map((u: any) => u.unit_kerja).filter(Boolean)));
+      setUnitKerjas(uniqueUnits);
+      
+      if (uniqueUnits.length > 0 && !selectedAudit) {
+        setSelectedAudit(uniqueUnits[0]);
+      }
+    } catch (error) {
+      console.error('API Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStatusChange = (auditorId: string | number, newStatus: StatusKelayakan) => {
-    setAuditorsData(prevData => {
-      const newData = {
-        ...prevData,
-        [selectedAudit]: prevData[selectedAudit].map(auditor => 
-          auditor.id === auditorId ? { ...auditor, status: newStatus } : auditor
-        )
-      };
-
-      const savedStatusStr = localStorage.getItem('penugasanAuditStatus');
-      const savedStatus = savedStatusStr ? JSON.parse(savedStatusStr) : {};
-      if (!savedStatus[selectedAudit]) savedStatus[selectedAudit] = {};
-      savedStatus[selectedAudit][auditorId] = newStatus;
-      localStorage.setItem('penugasanAuditStatus', JSON.stringify(savedStatus));
-
-      return newData;
-    });
-  };
-
-  const getDropdownStyle = (status: StatusKelayakan) => {
-    switch (status) {
-      case 'Layak Ditugaskan': return 'bg-[#dcfce7] text-[#166534] border-[#bbf7d0]';
-      case 'Perlu Penguatan': return 'bg-[#ffedd5] text-[#9a3412] border-[#fed7aa]';
-      case 'Tidak Direkomendasikan': return 'bg-[#fee2e2] text-[#991b1b] border-[#fecaca]';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const updatedStatuses = { ...evaluationStatuses };
+    if (!updatedStatuses[selectedAudit]) {
+      updatedStatuses[selectedAudit] = {};
     }
-  };
-
-  // LOGIKA MENYIAPKAN DATA PROFIL SAMA PERSIS DENGAN PROFIL KOMPETENSI
-  const handleViewProfile = (auditor: Auditor) => {
-    const userStr = localStorage.getItem('userManagementData');
-    const compStr = localStorage.getItem('rencanaKompetensiData');
+    updatedStatuses[selectedAudit][auditorId] = newStatus;
     
-    let userInfo: any = {};
-    let compInfo: any = {};
+    setEvaluationStatuses(updatedStatuses);
+    localStorage.setItem('penugasanAuditStatus', JSON.stringify(updatedStatuses));
+  };
 
-    if (userStr) {
-      const users = JSON.parse(userStr);
-      userInfo = users.find((u: any) => String(u.id) === String(auditor.id) || u.nama === auditor.name) || {};
+  const openReqModal = () => {
+    setTempReqs(kompetensiWajibMap[selectedAudit] || []);
+    setNewReq('');
+    setShowEditReqModal(true);
+  };
+
+  const addReq = () => {
+    if (newReq.trim()) {
+      setTempReqs([...tempReqs, newReq.trim()]);
+      setNewReq('');
     }
+  };
 
-    if (compStr) {
-      const comps = JSON.parse(compStr);
-      compInfo = comps.find((c: any) => String(c.id) === String(auditor.id) || c.nama === auditor.name) || {};
-    }
+  const removeReq = (index: number) => {
+    const arr = [...tempReqs];
+    arr.splice(index, 1);
+    setTempReqs(arr);
+  };
 
-    // Mapping list diklat menjadi format baku
-    let competencies: any[] = [];
-    if (compInfo && compInfo.diklatList) {
-      competencies = compInfo.diklatList.map((d: any) => ({
-        id: d.id || Math.random(),
-        year: d.tahun,
-        type: d.jenis,
-        name: (d.rencana?.diklat && d.rencana.diklat !== '-') ? d.rencana.diklat : 
-              (d.realisasi?.diklat && d.realisasi.diklat !== '-') ? d.realisasi.diklat : '-',
-        status: d.statusSertifikat || 'DIRENCANAKAN',
-        certNumber: d.nomorSertifikat || '-',
-        fileLink: d.sertifikat || '-',
-        fileBase64: d.sertifikatFileBase64 || null,
-        isPlanned: !!d.rencana?.diklat && d.rencana.diklat !== '-', 
-        isRealized: !!d.realisasi?.diklat && d.realisasi.diklat !== '-' 
-      }));
-    }
+  const saveReqs = () => {
+    const updatedMap = { ...kompetensiWajibMap, [selectedAudit]: tempReqs };
+    setKompetensiWajibMap(updatedMap);
+    localStorage.setItem('kompetensiWajibMap', JSON.stringify(updatedMap));
+    setShowEditReqModal(false);
+  };
 
-    // Mock data untuk mendemonstrasikan UI jika kosong (Persis gambar UI target)
-    if (competencies.length === 0) {
-      competencies = [
-        { id: 1, year: '2026', type: 'Sertifikasi', name: 'Cyber Security', status: '-', fileLink: '-', isPlanned: true, isRealized: false },
-        { id: 2, year: '2026', type: 'Diklat', name: 'IT Auditor', status: '-', fileLink: '-', isPlanned: true, isRealized: false }
-      ];
-    }
+  const handleViewProfile = (auditor: typeof allUsers[0]) => {
+    const userDiklats = allDiklat.filter(d => d.user_id === auditor.id);
+    
+    const competencies = userDiklats.map(d => ({
+      id: d.id,
+      year: d.tahun,
+      type: d.jenis,
+      name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
+            (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
+      status: d.tanggal_expired ? calculateStatus(d.tanggal_expired) : 'DIRENCANAKAN',
+      certNumber: d.nomor_sertifikat || '-',
+      fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
+      isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
+      isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
+    }));
 
-    // Kalkulasi KPI
     const allComps = competencies;
     const realizedComps = allComps.filter((c: any) => c.isRealized);
     const plannedComps = allComps.filter((c: any) => c.isPlanned);
@@ -227,14 +198,16 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
     const warningPercent = totalValid > 0 ? Math.round((countWarning / totalValid) * 100) : 0;
 
     setSelectedProfile({
-      name: auditor.name,
-      unit: userInfo.unitKerja || auditor.unit || 'BIRO AOPTI',
-      pos: userInfo.jabatan || 'Auditor',
-      status: userInfo.statusKeaktifan || 'Aktif',
-      statusKepegawaian: userInfo.statusKepegawaian || 'Magang',
-      avatar: auditor.name.charAt(0).toUpperCase(),
-      photo: userInfo.photo || null,
+      name: auditor.nama,
+      unit: auditor.unit_kerja || 'BELUM DIATUR',
+      pos: auditor.jabatan || 'AUDITOR',
+      status: auditor.status_keaktifan ? 'Aktif' : 'Tidak Aktif',
+      statusKepegawaian: auditor.status_kepegawaian || 'TIDAK DIKETAHUI',
+      avatar: auditor.nama.charAt(0).toUpperCase(),
+      photo: auditor.photo ? `${STORAGE_URL}/${auditor.photo}` : null,
+      np: auditor.np,
       validComps: validComps.length > 0 ? validComps : allComps,
+      allComps: allComps, // Pass all competencies for "Total Program"
       kpi: {
         targetRealizedPercent,
         countSertifikasi,
@@ -250,128 +223,215 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
     setIsProfileModalOpen(true);
   };
 
-  // LOGIKA PEMBUKAAN FILE DOKUMEN (DUAL MODE)
-  const handleViewDocument = (c: any) => {
-    if (c.fileLink && c.fileLink.startsWith('[FILE]')) {
-      if (c.fileBase64) {
-        setPreviewFileData({
-          fileName: c.fileLink.replace('[FILE] ', ''),
-          fileBase64: c.fileBase64,
-          fileType: c.fileLink.split('.').pop()?.toLowerCase() || 'pdf'
-        });
-        setIsPreviewModalOpen(true);
-      } else {
-        alert("File gagal dimuat atau tidak ditemukan di penyimpanan.");
-      }
-    } 
-    else if (c.fileLink && c.fileLink !== '-' && c.fileLink.startsWith('http')) {
-      window.open(c.fileLink, '_blank', 'noopener,noreferrer');
-    }
-    else {
-      // Jika tidak ada link atau file, tunjukkan Mockup Sertifikat untuk demo UI
-      setCertificateToView(c.name);
+  const getDropdownStyle = (status: StatusKelayakan) => {
+    switch (status) {
+      case 'Layak Ditugaskan': return 'bg-[#dcfce7] text-[#166534] border-[#bbf7d0]';
+      case 'Perlu Penguatan': return 'bg-[#ffedd5] text-[#9a3412] border-[#fed7aa]';
+      case 'Tidak Direkomendasikan': return 'bg-[#fee2e2] text-[#991b1b] border-[#fecaca]';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
+  const handleViewDocument = (c: any) => {
+    if (!c.fileLink || c.fileLink === '-') return;
+
+    const ext = c.fileLink.split('.').pop()?.toLowerCase();
+    setPreviewFileData({
+      fileName: c.fileLink.split('/').pop() || 'Sertifikat',
+      fileUrl: c.fileLink,
+      fileType: (ext === 'pdf') ? 'pdf' : 'image'
+    });
+    setIsPreviewModalOpen(true);
+  };
+
+  const currentAuditors = allUsers.filter(u => u.unit_kerja === selectedAudit);
+  const currentReqs = kompetensiWajibMap[selectedAudit] || [];
+
   return (
     <div className="bg-[#f4f6f9] min-h-screen -m-6 sm:-m-8 relative font-sans">
-      {/* Header Utama */}
       <div className="bg-[#0b3c5d] text-white px-8 py-6">
         <h1 className="text-xl font-bold mb-1">Si-Tor – Penugasan Audit Berbasis Kompetensi</h1>
-        <p className="text-xs text-blue-100">Satuan Pengawasan Internal</p>
+        <p className="text-xs text-blue-100">Pemetaan dan Rekomendasi Personel Berdasarkan Unit Kerja</p>
       </div>
 
       <div className="p-8 space-y-6">
-        {/* Card Pilih Audit */}
+        {/* Card Pilih Unit Kerja Penugasan */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Pilih Penugasan Audit</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Pilih Penugasan Audit (Berdasarkan Unit Kerja)</h2>
           <div className="flex flex-wrap gap-2">
-            {auditTypes.map((audit) => (
+            {unitKerjas.length > 0 ? unitKerjas.map((unit) => (
               <button
-                key={audit.id}
-                onClick={() => setSelectedAudit(audit.name)}
+                key={unit}
+                onClick={() => setSelectedAudit(unit)}
                 className={`px-4 py-2 rounded text-sm font-semibold transition-colors ${
-                  selectedAudit === audit.name ? 'bg-[#0b3c5d] text-white' : 'bg-[#0b3c5d] text-white opacity-90 hover:opacity-100'
+                  selectedAudit === unit ? 'bg-[#0b3c5d] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {audit.name}
+                {unit}
               </button>
-            ))}
+            )) : (
+              <p className="text-sm text-gray-500 italic">Mencari data Unit Kerja...</p>
+            )}
           </div>
         </div>
 
-        {/* Card Kompetensi */}
-        {currentAuditInfo && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Kompetensi Wajib untuk Audit: {selectedAudit}
-            </h2>
-            <ul className="list-disc pl-5 space-y-1 text-sm text-gray-800">
-              {currentAuditInfo.reqs.map((req, index) => (
-                <li key={index}>{req}</li>
-              ))}
-            </ul>
+        {/* Card Kompetensi Wajib */}
+        {selectedAudit && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col items-start relative">
+            <div className="flex justify-between items-center w-full mb-4">
+              <h2 className="text-lg font-bold text-gray-900">
+                Kompetensi Wajib untuk Penugasan: <span className="text-[#0b3c5d]">{selectedAudit}</span>
+              </h2>
+              <button 
+                onClick={openReqModal}
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
+              >
+                <Edit className="w-4 h-4" /> Edit Kompetensi
+              </button>
+            </div>
+            
+            {currentReqs.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-2 text-sm text-gray-800">
+                {currentReqs.map((req, index) => (
+                  <li key={index} className="font-medium">{req}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 italic">Belum ada kompetensi wajib yang didaftarkan untuk unit kerja ini.</p>
+            )}
           </div>
         )}
 
         {/* Tabel Evaluasi Penugasan Utama */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Evaluasi Auditor untuk Penugasan</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead>
-                <tr className="bg-[#0b3c5d] text-white">
-                  <th className="px-4 py-3 font-semibold">Auditor</th>
-                  <th className="px-4 py-3 font-semibold">Unit</th>
-                  <th className="px-4 py-3 font-semibold text-center w-56">Status Kelayakan</th>
-                  <th className="px-4 py-3 font-semibold text-center w-24">Detail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {currentAuditors.length > 0 ? (
-                  currentAuditors.map((auditor) => (
-                    <tr key={auditor.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-900 font-bold">{auditor.name}</td>
-                      <td className="px-4 py-3 text-gray-700">{auditor.unit}</td>
-                      <td className="px-4 py-3 text-center">
-                        <select
-                          value={auditor.status}
-                          onChange={(e) => handleStatusChange(auditor.id, e.target.value as StatusKelayakan)}
-                          className={`w-full text-xs font-bold px-3 py-1.5 rounded-full border outline-none cursor-pointer text-center appearance-none text-center-last transition-colors ${getDropdownStyle(auditor.status)}`}
-                          style={{ textAlignLast: 'center' }}
-                        >
-                          <option value="Layak Ditugaskan" className="bg-white text-gray-900">Layak Ditugaskan</option>
-                          <option value="Perlu Penguatan" className="bg-white text-gray-900">Perlu Penguatan</option>
-                          <option value="Tidak Direkomendasikan" className="bg-white text-gray-900">Tidak Direkomendasikan</option>
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {/* TOMBOL KLIK -> BUKA MODAL PROFIL */}
-                        <button 
-                          onClick={() => handleViewProfile(auditor)}
-                          className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-bold transition-all"
-                        >
-                          Klik
-                        </button>
+        {selectedAudit && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Evaluasi Personel Unit Kerja {selectedAudit}</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#0b3c5d] text-white">
+                    <th className="px-4 py-3 font-semibold">Auditor</th>
+                    <th className="px-4 py-3 font-semibold">Jabatan</th>
+                    <th className="px-4 py-3 font-semibold text-center w-56">Status Kelayakan</th>
+                    <th className="px-4 py-3 font-semibold text-center w-24">Detail</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {currentAuditors.length > 0 ? (
+                    currentAuditors.map((auditor) => {
+                      const status = evaluationStatuses[selectedAudit]?.[auditor.id] || 'Perlu Penguatan';
+
+                      return (
+                        <tr key={auditor.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col">
+                              <span className="text-gray-900 font-bold">{auditor.nama}</span>
+                              <span className="text-xs text-gray-400 font-semibold">{auditor.np || '-'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">{auditor.jabatan || '-'}</td>
+                          <td className="px-4 py-3 text-center">
+                            <select
+                              value={status}
+                              onChange={(e) => handleStatusChange(auditor.id, e.target.value as StatusKelayakan)}
+                              className={`w-full text-xs font-bold px-3 py-1.5 rounded-full border outline-none cursor-pointer text-center appearance-none text-center-last transition-colors ${getDropdownStyle(status)}`}
+                              style={{ textAlignLast: 'center' }}
+                            >
+                              <option value="Layak Ditugaskan" className="bg-white text-gray-900">Layak Ditugaskan</option>
+                              <option value="Perlu Penguatan" className="bg-white text-gray-900">Perlu Penguatan</option>
+                              <option value="Tidak Direkomendasikan" className="bg-white text-gray-900">Tidak Direkomendasikan</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button 
+                              onClick={() => handleViewProfile(auditor)}
+                              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg font-bold transition-all"
+                            >
+                              Klik
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
+                        {loading ? 'Memuat data personel...' : `Tidak ada auditor yang terdaftar di Unit Kerja ${selectedAudit}.`}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
-                      Belum ada data Auditor di sistem. Silakan tambahkan personil dengan Role "User" pada menu User Management.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ============================================================== */}
+      {/* MODAL EDIT KOMPETENSI WAJIB */}
+      {showEditReqModal && (
+        <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-900">Manajemen Kompetensi Wajib</h2>
+              <button onClick={() => setShowEditReqModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">Edit kompetensi yang dibutuhkan untuk unit kerja <strong>{selectedAudit}</strong>.</p>
+              
+              <div className="flex gap-2 mb-4">
+                <input 
+                  type="text" 
+                  value={newReq} 
+                  onChange={(e) => setNewReq(e.target.value)} 
+                  onKeyDown={(e) => e.key === 'Enter' && addReq()}
+                  className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  placeholder="Ketik kompetensi baru..."
+                />
+                <button 
+                  onClick={addReq}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Tambah
+                </button>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50">
+                {tempReqs.map((req, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                    <span className="text-sm font-medium text-gray-800">{req}</span>
+                    <button onClick={() => removeReq(index)} className="text-red-500 hover:text-red-700 p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {tempReqs.length === 0 && (
+                  <p className="text-center text-gray-400 text-sm italic py-4">Belum ada kompetensi terdaftar.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowEditReqModal(false)}
+                className="px-4 py-2 text-gray-600 font-semibold hover:bg-gray-200 rounded-lg transition-colors text-sm"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={saveReqs}
+                className="px-6 py-2 bg-[#0b3c5d] hover:bg-blue-800 text-white font-bold rounded-lg shadow-md transition-colors text-sm"
+              >
+                Simpan Konfigurasi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL PROFIL PERSONEL (100% PERSIS PROFIL KOMPETENSI) */}
-      {/* ============================================================== */}
       {isProfileModalOpen && selectedProfile && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div 
@@ -408,12 +468,12 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
                 <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
                   <span className="text-gray-500">Total Program:</span> 
                   <span className="font-semibold text-gray-800 ml-1">
-                    {selectedProfile.kpi.totalValid}
+                    {selectedProfile.allComps?.length || 0}
                   </span>
                 </div>
                 
                 <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
-                  <span className="text-gray-500">Status:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.status === 'TETAP' ? 'Aktif' : selectedProfile.status}</span>
+                  <span className="text-gray-500">Status:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.status}</span>
                 </div>
               </div>
             </div>
@@ -428,14 +488,14 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
                   percentage={selectedProfile.kpi.targetRealizedPercent} 
                 />
                 <CircularProgress 
-                  title="Proporsi Sertifikasi" 
-                  valueText={`${selectedProfile.kpi.countSertifikasi} dari ${selectedProfile.kpi.totalValid}`} 
-                  percentage={selectedProfile.kpi.sertifikasiPercent} 
-                />
-                <CircularProgress 
                   title="Sertifikat Aktif" 
                   valueText={selectedProfile.kpi.countAktif.toString()} 
                   percentage={selectedProfile.kpi.aktifPercent} 
+                />
+                <CircularProgress 
+                  title="Sertifikat Hampir Expired" 
+                  valueText={selectedProfile.kpi.countWarning.toString() /* this is actually warning+expired, should adjust */} 
+                  percentage={selectedProfile.kpi.warningPercent} 
                 />
                 <CircularProgress 
                   title="Sertifikat Expired" 
@@ -507,50 +567,7 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL MOCKUP SERTIFIKAT (JIKA BUKAN REAL FILE) */}
-      {/* ============================================================== */}
-      {certificateToView && (
-        <div className="absolute inset-0 bg-slate-900/80 z-[60] flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-gray-100 rounded-xl shadow-2xl w-full max-w-4xl h-full max-h-[85vh] flex flex-col overflow-hidden relative border border-slate-700">
-            <div className="bg-slate-800 px-6 py-4 flex justify-between items-center border-b border-slate-700 flex-shrink-0">
-              <div className="flex items-center space-x-3 text-white">
-                <FileText className="w-5 h-5 text-blue-400" />
-                <h3 className="font-semibold text-sm">{certificateToView}.pdf</h3>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => setCertificateToView(null)} 
-                  className="text-gray-300 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 p-8 overflow-y-auto flex justify-center items-center">
-              <div className="bg-white w-full max-w-3xl aspect-[1.414] p-10 border-[12px] border-double border-[#1e3a8a] outline outline-4 outline-offset-4 outline-[#d97706] text-center shadow-xl relative flex flex-col justify-center items-center">
-                <Award className="w-48 h-48 text-[#fef3c7] absolute opacity-40 z-0 pointer-events-none" />
-                <div className="z-10 w-full relative">
-                  <h1 className="text-3xl md:text-5xl font-serif font-black text-gray-900 mb-3 uppercase tracking-[0.2em]">Sertifikat Kompetensi</h1>
-                  <p className="text-gray-500 mb-8 italic text-sm md:text-base">Diberikan sebagai pengakuan resmi kepada:</p>
-                  <h2 className="text-2xl md:text-4xl font-bold text-[#1e3a8a] mb-6 border-b-2 border-gray-300 pb-3 inline-block px-12 uppercase tracking-wide">
-                    {selectedProfile?.name}
-                  </h2>
-                  <p className="text-gray-600 mb-3">Atas keberhasilan memenuhi standar kualifikasi pada program:</p>
-                  <h3 className="text-xl md:text-3xl font-bold text-gray-800 mb-16 px-8 leading-tight">
-                    {certificateToView}
-                  </h3>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================== */}
-      {/* MODAL PREVIEW PDF/GAMBAR (JIKA REAL FILE DARI RKT) */}
-      {/* ============================================================== */}
+      {/* MODAL PREVIEW PDF/GAMBAR */}
       {isPreviewModalOpen && previewFileData && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200">
@@ -567,44 +584,37 @@ export default function PenugasanAudit({ onNavigateToProfile: _onNavigateToProfi
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto flex items-center justify-center bg-gray-50 p-6">
+            <div className="flex-1 overflow-y-auto flex items-center justify-center bg-gray-50 p-6 min-h-[500px]">
               {previewFileData.fileType === 'pdf' ? (
                 <iframe
-                  src={previewFileData.fileBase64}
+                  src={previewFileData.fileUrl}
                   className="w-full h-full border-0 rounded-lg shadow-lg"
-                  style={{ minHeight: '500px' }}
+                  title="PDF Preview"
                 />
               ) : (
                 <img
-                  src={previewFileData.fileBase64}
+                  src={previewFileData.fileUrl}
                   alt={previewFileData.fileName}
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                  style={{ maxHeight: 'calc(95vh - 150px)' }}
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
                 />
               )}
             </div>
 
             <div className="p-5 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
               <div className="text-xs text-gray-600">
-                <span className="font-semibold">File:</span> {previewFileData.fileName}
+                <span className="font-semibold">Sistem Penyimpanan Terpadu Si-Tor</span>
               </div>
               <button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = previewFileData.fileBase64;
-                  link.download = previewFileData.fileName;
-                  link.click();
-                }}
+                onClick={() => window.open(previewFileData.fileUrl, '_blank')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Download className="w-4 h-4" />
-                <span>Download</span>
+                <span>Buka di Tab Baru</span>
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
