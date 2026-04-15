@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Search, Edit, Trash2, Check, X } from 'lucide-react';
+import { Users, UserPlus, Search, Edit, Trash2, Check, X, Unlock, Lock } from 'lucide-react';
 import axios from 'axios'; // <-- Tambahkan axios
 import { useAuth } from '../../../context/AuthContext';
 
@@ -41,6 +41,7 @@ export default function UserManagement() {
         statusKepegawaian: u.status_kepegawaian,
         statusKeaktifan: u.status_keaktifan ? 'Aktif' : 'Tidak Aktif',
         role: u.role,
+        isLocked: u.is_locked, // Tambahkan isLocked dari backend
       }));
       setUsers(formattedUsers);
     } catch (error) {
@@ -139,6 +140,23 @@ export default function UserManagement() {
     }
   };
 
+  const handleUnlock = async (id: string, nama: string) => {
+    if (window.confirm(`Yakin ingin membuka kunci akun ${nama}?`)) {
+      try {
+        await axios.put(`http://127.0.0.1:8000/api/users/${id}/unlock`, {}, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}` // Sesuaikan dengan cara auth Anda, jika token di-pass via aksesor axios global, ini opsional
+          }
+        });
+        alert(`Kunci akun ${nama} berhasil dibuka.`);
+        fetchUsers();
+      } catch (error: any) {
+        console.error('Gagal membuka kunci:', error);
+        alert(error.response?.data?.message || 'Gagal membuka kunci akun.');
+      }
+    }
+  };
+
   const filteredUsers = users.filter(u => {
     const matchSearch = u.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         u.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -230,8 +248,25 @@ export default function UserManagement() {
                         'bg-emerald-100 text-emerald-700'}`}>
                       {u.role}
                     </span>
+                    {u.isLocked && (
+                      <div className="mt-1">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 flex items-center justify-center space-x-1" title="Akun Terkunci karena salah password 3 kali">
+                          <Lock className="w-3 h-3" />
+                          <span>Terkunci</span>
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 flex justify-center space-x-2">
+                    {u.isLocked && currentUser?.role === 'Super Admin' && (
+                      <button 
+                        onClick={() => handleUnlock(u.id, u.nama)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Buka Kunci Akun"
+                      >
+                        <Unlock className="w-4 h-4" />
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleOpenModal('edit', u)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
