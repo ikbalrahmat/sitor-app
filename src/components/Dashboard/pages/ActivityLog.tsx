@@ -13,7 +13,6 @@ export default function ActivityLog() {
 
   const fetchLogs = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await api.get('/logs');
       setLogs(response.data);
     } catch (error) {

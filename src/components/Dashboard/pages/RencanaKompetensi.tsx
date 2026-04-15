@@ -11,7 +11,6 @@ import {
   FileText
 } from 'lucide-react';
 import React, { useState, useMemo, Fragment, useEffect } from 'react';
-import axios from 'axios';
 import api, { STORAGE_URL } from '../../../lib/api';
 
 // Fungsi bantuan untuk menghitung status sertifikat secara otomatis
@@ -70,12 +69,9 @@ export default function RencanaKompetensi() {
   // ==========================================
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const [usersRes, diklatRes] = await Promise.all([
-        api.get('/users', config),
-        api.get('/diklat', config)
+        api.get('/users'),
+        api.get('/diklat')
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
@@ -295,13 +291,7 @@ export default function RencanaKompetensi() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const config = { 
-        headers: { 
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}` 
-        }
-      };
+      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
 
       if (modalMode === 'add_diklat') {
         await api.post('/diklat', payload, config);
@@ -322,7 +312,6 @@ export default function RencanaKompetensi() {
   const handleDeleteDiklat = async (diklatId: number) => {
     if(confirm('Yakin ingin menghapus data diklat ini beserta sertifikatnya?')) {
       try {
-        const token = localStorage.getItem('token');
         await api.delete(`/diklat/${diklatId}`);
         fetchData();
       } catch (error) {

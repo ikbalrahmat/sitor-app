@@ -6,7 +6,6 @@ import {
   ArrowRightCircle, Filter, Edit3, Edit, Trash2, Camera,
   Download, Upload
 } from 'lucide-react';
-import axios from 'axios';
 import api, { STORAGE_URL } from '../../../lib/api';
 
 // --- FUNGSI BANTUAN UNTUK STATUS SERTIFIKAT ---
@@ -97,12 +96,9 @@ export default function UnitKompetensi() {
   // ==========================================
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const [usersRes, diklatRes] = await Promise.all([
-        api.get('/users', config),
-        api.get('/diklat', config)
+        api.get('/users'),
+        api.get('/diklat')
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
@@ -201,7 +197,6 @@ export default function UnitKompetensi() {
     }
 
     try {
-      const token = localStorage.getItem('token');
       await api.post('/users', payload, {
         headers: { 
           'Content-Type': 'multipart/form-data'
@@ -231,7 +226,6 @@ export default function UnitKompetensi() {
   const executeDelete = async () => {
     if (personToDelete) {
       try {
-        const token = localStorage.getItem('token');
         await api.delete(`/users/${personToDelete.id}`);
         fetchData();
         setShowDeleteModal(false);
@@ -290,7 +284,6 @@ export default function UnitKompetensi() {
     payload.append('_method', 'PUT');
 
     try {
-      const token = localStorage.getItem('token');
       await api.post(`/users/${editingPerson.id}`, payload, {
         headers: { 
           'Content-Type': 'multipart/form-data'

@@ -30,7 +30,6 @@ export default function MatriksRisiko() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await api.get('/matriks-risiko');
       setMatrixData(response.data);
       if (response.data.length > 0 && !activeDetail) {
@@ -53,7 +52,6 @@ export default function MatriksRisiko() {
   const saveRiskData = async (userId: number, updatedData: AuditorRisk) => {
     if (isReadOnly) return; // Proteksi ganda
     try {
-      const token = localStorage.getItem('token');
       await api.put(`/matriks-risiko/${userId}`, {
         opsTI: updatedData.opsTI,
         keuanganFraud: updatedData.keuanganFraud,
