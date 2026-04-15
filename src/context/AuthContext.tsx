@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import axios from 'axios';
+import api from '../lib/api';
 
 export type Role = 'Super Admin' | 'Admin' | 'User' | 'Manajemen';
 
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('https://sitor-backend-production.up.railway.app/api/login', {
+      const response = await api.post('/login', {
         email: email,
         password: password
       });
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await axios.post('https://sitor-backend-production.up.railway.app/api/logout');
+        await api.post('/logout');
       }
     } catch (error) {
       console.error('Error saat logout server', error);

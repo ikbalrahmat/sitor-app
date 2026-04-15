@@ -3,7 +3,7 @@ import {
   Users, Award, ShieldAlert, TrendingUp, 
   BookOpen, AlertTriangle, CheckCircle2, Activity 
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardHome() {
@@ -32,10 +32,10 @@ export default function DashboardHome() {
 
         // Tarik semua data dari 4 pilar utama aplikasi
         const [usersRes, diklatRes, penilaianRes, risikoRes] = await Promise.all([
-          axios.get('https://sitor-backend-production.up.railway.app/api/users', config),
-          axios.get('https://sitor-backend-production.up.railway.app/api/diklat', config),
-          axios.get('https://sitor-backend-production.up.railway.app/api/penilaian', config),
-          axios.get('https://sitor-backend-production.up.railway.app/api/matriks-risiko', config)
+          api.get('/users', config),
+          api.get('/diklat', config),
+          api.get('/penilaian', config),
+          api.get('/matriks-risiko', config)
         ]);
 
         const usersData = usersRes.data;

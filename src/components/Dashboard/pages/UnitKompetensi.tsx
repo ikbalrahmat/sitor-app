@@ -7,6 +7,7 @@ import {
   Download, Upload
 } from 'lucide-react';
 import axios from 'axios';
+import api, { STORAGE_URL } from '../../../lib/api';
 
 // --- FUNGSI BANTUAN UNTUK STATUS SERTIFIKAT ---
 const calculateStatus = (dateString: string) => {
@@ -100,8 +101,8 @@ export default function UnitKompetensi() {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [usersRes, diklatRes] = await Promise.all([
-        axios.get('https://sitor-backend-production.up.railway.app/api/users', config),
-        axios.get('https://sitor-backend-production.up.railway.app/api/diklat', config)
+        api.get('/users', config),
+        api.get('/diklat', config)
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
@@ -117,7 +118,7 @@ export default function UnitKompetensi() {
                 (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
           status: d.tanggal_expired ? calculateStatus(d.tanggal_expired) : 'DIRENCANAKAN',
           certNumber: d.nomor_sertifikat || '-',
-          fileLink: d.sertifikat_path ? `https://sitor-backend-production.up.railway.app/storage/${d.sertifikat_path}` : null,
+          fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
           isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
           isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
         }));
@@ -131,7 +132,7 @@ export default function UnitKompetensi() {
           status: user.status_keaktifan ? 'TETAP' : 'TIDAK AKTIF',
           np: user.np || '-',
           avatar: user.nama?.charAt(0).toUpperCase() || 'A',
-          photo: user.photo ? `https://sitor-backend-production.up.railway.app/storage/${user.photo}` : null,
+          photo: user.photo ? `${STORAGE_URL}/${user.photo}` : null,
           investasi: 'Rp 0',
           email: user.email || '-',
           competencies: competencies
@@ -201,10 +202,9 @@ export default function UnitKompetensi() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('https://sitor-backend-production.up.railway.app/api/users', payload, {
+      await api.post('/users', payload, {
         headers: { 
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}` 
+          'Content-Type': 'multipart/form-data'
         }
       });
       fetchData();
@@ -232,9 +232,7 @@ export default function UnitKompetensi() {
     if (personToDelete) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`https://sitor-backend-production.up.railway.app/api/users/${personToDelete.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/users/${personToDelete.id}`);
         fetchData();
         setShowDeleteModal(false);
         setPersonToDelete(null);
@@ -293,10 +291,9 @@ export default function UnitKompetensi() {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`https://sitor-backend-production.up.railway.app/api/users/${editingPerson.id}`, payload, {
+      await api.post(`/users/${editingPerson.id}`, payload, {
         headers: { 
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}` 
+          'Content-Type': 'multipart/form-data'
         }
       });
       fetchData();

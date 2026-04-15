@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, Info, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext'; // <-- Import Auth Context
 
 type RiskLevel = 'Rendah' | 'Sedang' | 'Tinggi';
@@ -31,9 +31,7 @@ export default function MatriksRisiko() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://sitor-backend-production.up.railway.app/api/matriks-risiko', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/matriks-risiko');
       setMatrixData(response.data);
       if (response.data.length > 0 && !activeDetail) {
         setActiveDetail({
@@ -56,15 +54,13 @@ export default function MatriksRisiko() {
     if (isReadOnly) return; // Proteksi ganda
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`https://sitor-backend-production.up.railway.app/api/matriks-risiko/${userId}`, {
+      await api.put(`/matriks-risiko/${userId}`, {
         opsTI: updatedData.opsTI,
         keuanganFraud: updatedData.keuanganFraud,
         kepatuhan: updatedData.kepatuhan,
         catatanOpsTI: updatedData.catatanOpsTI,
         catatanKeuanganFraud: updatedData.catatanKeuanganFraud,
         catatanKepatuhan: updatedData.catatanKepatuhan
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
       console.error('Gagal menyimpan data matriks risiko:', error);

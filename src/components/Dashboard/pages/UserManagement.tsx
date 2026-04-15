@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Search, Edit, Trash2, Check, X, Unlock, Lock } from 'lucide-react';
-import axios from 'axios'; // <-- Tambahkan axios
+import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function UserManagement() {
@@ -28,7 +28,7 @@ export default function UserManagement() {
   // MENGAMBIL DATA DARI DATABASE (LARAVEL API)
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('https://sitor-backend-production.up.railway.app/api/users');
+      const response = await api.get('/users');
       // Format data dari database ke format frontend
       const formattedUsers = response.data.map((u: any) => ({
         id: u.id.toString(), // Database id biasanya number
@@ -111,9 +111,9 @@ export default function UserManagement() {
 
     try {
       if (modalMode === 'add') {
-        await axios.post('https://sitor-backend-production.up.railway.app/api/users', payload);
+        await api.post('/users', payload);
       } else {
-        await axios.put(`https://sitor-backend-production.up.railway.app/api/users/${formData.id}`, payload);
+        await api.put(`/users/${formData.id}`, payload);
       }
       
       // Refresh data dari database setelah sukses simpan
@@ -130,7 +130,7 @@ export default function UserManagement() {
   const handleDelete = async (id: string) => {
     if (window.confirm('Yakin ingin menghapus pengguna ini?')) {
       try {
-        await axios.delete(`https://sitor-backend-production.up.railway.app/api/users/${id}`);
+        await api.delete(`/users/${id}`);
         // Refresh tabel
         fetchUsers();
       } catch (error) {
@@ -143,11 +143,7 @@ export default function UserManagement() {
   const handleUnlock = async (id: string, nama: string) => {
     if (window.confirm(`Yakin ingin membuka kunci akun ${nama}?`)) {
       try {
-        await axios.put(`https://sitor-backend-production.up.railway.app/api/users/${id}/unlock`, {}, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}` // Sesuaikan dengan cara auth Anda, jika token di-pass via aksesor axios global, ini opsional
-          }
-        });
+        await api.put(`/users/${id}/unlock`);
         alert(`Kunci akun ${nama} berhasil dibuka.`);
         fetchUsers();
       } catch (error: any) {

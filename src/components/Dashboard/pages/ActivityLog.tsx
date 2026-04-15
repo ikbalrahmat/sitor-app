@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity, Search, ShieldAlert, Monitor, Clock, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../../../lib/api';
 
 export default function ActivityLog() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -14,9 +14,7 @@ export default function ActivityLog() {
   const fetchLogs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('https://sitor-backend-production.up.railway.app/api/logs', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/logs');
       setLogs(response.data);
     } catch (error) {
       console.error('Gagal mengambil data log:', error);

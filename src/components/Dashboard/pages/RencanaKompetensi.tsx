@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import React, { useState, useMemo, Fragment, useEffect } from 'react';
 import axios from 'axios';
+import api, { STORAGE_URL } from '../../../lib/api';
 
 // Fungsi bantuan untuk menghitung status sertifikat secara otomatis
 const calculateStatus = (dateString: string) => {
@@ -73,8 +74,8 @@ export default function RencanaKompetensi() {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [usersRes, diklatRes] = await Promise.all([
-        axios.get('https://sitor-backend-production.up.railway.app/api/users', config),
-        axios.get('https://sitor-backend-production.up.railway.app/api/diklat', config)
+        api.get('/users', config),
+        api.get('/diklat', config)
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
@@ -303,9 +304,9 @@ export default function RencanaKompetensi() {
       };
 
       if (modalMode === 'add_diklat') {
-        await axios.post('https://sitor-backend-production.up.railway.app/api/diklat', payload, config);
+        await api.post('/diklat', payload, config);
       } else {
-        await axios.post(`https://sitor-backend-production.up.railway.app/api/diklat/${selectedDiklat.id}`, payload, config);
+        await api.post(`/diklat/${selectedDiklat.id}`, payload, config);
       }
       
       await fetchData(); 
@@ -322,9 +323,7 @@ export default function RencanaKompetensi() {
     if(confirm('Yakin ingin menghapus data diklat ini beserta sertifikatnya?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`https://sitor-backend-production.up.railway.app/api/diklat/${diklatId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.delete(`/diklat/${diklatId}`);
         fetchData();
       } catch (error) {
         console.error('Gagal menghapus', error);
@@ -485,7 +484,7 @@ export default function RencanaKompetensi() {
                             {diklat.sertifikat_path ? (
                               <button 
                                 onClick={() => {
-                                  const fileUrl = `https://sitor-backend-production.up.railway.app/storage/${diklat.sertifikat_path}`;
+                                  const fileUrl = `${STORAGE_URL}/${diklat.sertifikat_path}`;
                                   const ext = diklat.sertifikat_path.split('.').pop()?.toLowerCase();
                                   setPreviewFileData({
                                     fileName: diklat.sertifikat_path.split('/').pop() || 'Sertifikat',

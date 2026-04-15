@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function ChangePassword() {
@@ -30,7 +30,7 @@ export default function ChangePassword() {
     }
 
     try {
-      const response = await axios.post('https://sitor-backend-production.up.railway.app/api/change-password', {
+      const response = await api.post('/change-password', {
         current_password: currentPassword,
         new_password: newPassword,
         new_password_confirmation: confirmPassword
