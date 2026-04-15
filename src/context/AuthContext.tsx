@@ -10,6 +10,12 @@ export interface User {
   nama: string;
   email: string;
   role: Role;
+  jabatan?: string;
+  unit_kerja?: string;
+  instansi?: string;
+  status_kepegawaian?: string;
+  np?: string;
+  photo?: string | null;
   preferences?: { darkMode?: boolean; emailNotif?: boolean; pushNotif?: boolean } | string;
 }
 
@@ -56,7 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: userData.id.toString(), 
         nama: userData.nama, 
         email: userData.email, 
-        role: userData.role as Role 
+        role: userData.role as Role,
+        jabatan: userData.jabatan || '',
+        unit_kerja: userData.unit_kerja || '',
+        instansi: userData.instansi || '',
+        status_kepegawaian: userData.status_kepegawaian || '',
+        np: userData.np || '',
+        photo: userData.photo || null
       };
 
       setUser(authUser);
