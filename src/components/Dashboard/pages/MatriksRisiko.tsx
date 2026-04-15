@@ -31,7 +31,7 @@ export default function MatriksRisiko() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://127.0.0.1:8000/api/matriks-risiko', {
+      const response = await axios.get('https://sitor-backend-production.up.railway.app/api/matriks-risiko', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMatrixData(response.data);
@@ -56,7 +56,7 @@ export default function MatriksRisiko() {
     if (isReadOnly) return; // Proteksi ganda
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://127.0.0.1:8000/api/matriks-risiko/${userId}`, {
+      await axios.put(`https://sitor-backend-production.up.railway.app/api/matriks-risiko/${userId}`, {
         opsTI: updatedData.opsTI,
         keuanganFraud: updatedData.keuanganFraud,
         kepatuhan: updatedData.kepatuhan,

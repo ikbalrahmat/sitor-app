@@ -32,10 +32,10 @@ export default function DashboardHome() {
 
         // Tarik semua data dari 4 pilar utama aplikasi
         const [usersRes, diklatRes, penilaianRes, risikoRes] = await Promise.all([
-          axios.get('http://127.0.0.1:8000/api/users', config),
-          axios.get('http://127.0.0.1:8000/api/diklat', config),
-          axios.get('http://127.0.0.1:8000/api/penilaian', config),
-          axios.get('http://127.0.0.1:8000/api/matriks-risiko', config)
+          axios.get('https://sitor-backend-production.up.railway.app/api/users', config),
+          axios.get('https://sitor-backend-production.up.railway.app/api/diklat', config),
+          axios.get('https://sitor-backend-production.up.railway.app/api/penilaian', config),
+          axios.get('https://sitor-backend-production.up.railway.app/api/matriks-risiko', config)
         ]);
 
         const usersData = usersRes.data;

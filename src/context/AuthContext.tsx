@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/login', {
+      const response = await axios.post('https://sitor-backend-production.up.railway.app/api/login', {
         email: email,
         password: password
       });
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem('token');
       if (token) {
-        await axios.post('http://127.0.0.1:8000/api/logout');
+        await axios.post('https://sitor-backend-production.up.railway.app/api/logout');
       }
     } catch (error) {
       console.error('Error saat logout server', error);

@@ -73,8 +73,8 @@ export default function RencanaKompetensi() {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [usersRes, diklatRes] = await Promise.all([
-        axios.get('http://127.0.0.1:8000/api/users', config),
-        axios.get('http://127.0.0.1:8000/api/diklat', config)
+        axios.get('https://sitor-backend-production.up.railway.app/api/users', config),
+        axios.get('https://sitor-backend-production.up.railway.app/api/diklat', config)
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
@@ -303,9 +303,9 @@ export default function RencanaKompetensi() {
       };
 
       if (modalMode === 'add_diklat') {
-        await axios.post('http://127.0.0.1:8000/api/diklat', payload, config);
+        await axios.post('https://sitor-backend-production.up.railway.app/api/diklat', payload, config);
       } else {
-        await axios.post(`http://127.0.0.1:8000/api/diklat/${selectedDiklat.id}`, payload, config);
+        await axios.post(`https://sitor-backend-production.up.railway.app/api/diklat/${selectedDiklat.id}`, payload, config);
       }
       
       await fetchData(); 
@@ -322,7 +322,7 @@ export default function RencanaKompetensi() {
     if(confirm('Yakin ingin menghapus data diklat ini beserta sertifikatnya?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://127.0.0.1:8000/api/diklat/${diklatId}`, {
+        await axios.delete(`https://sitor-backend-production.up.railway.app/api/diklat/${diklatId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         fetchData();
@@ -485,7 +485,7 @@ export default function RencanaKompetensi() {
                             {diklat.sertifikat_path ? (
                               <button 
                                 onClick={() => {
-                                  const fileUrl = `http://127.0.0.1:8000/storage/${diklat.sertifikat_path}`;
+                                  const fileUrl = `https://sitor-backend-production.up.railway.app/storage/${diklat.sertifikat_path}`;
                                   const ext = diklat.sertifikat_path.split('.').pop()?.toLowerCase();
                                   setPreviewFileData({
                                     fileName: diklat.sertifikat_path.split('/').pop() || 'Sertifikat',

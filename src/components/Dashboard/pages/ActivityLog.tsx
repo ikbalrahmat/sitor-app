@@ -14,7 +14,7 @@ export default function ActivityLog() {
   const fetchLogs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://127.0.0.1:8000/api/logs', {
+      const response = await axios.get('https://sitor-backend-production.up.railway.app/api/logs', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setLogs(response.data);
