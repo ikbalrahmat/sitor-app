@@ -8,8 +8,8 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    // PERBAIKAN: Menambahkan class dark:bg-slate-900
-    <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
+    // PERBAIKAN: Class dihapus
+    <div className="flex h-screen bg-gray-50 transition-colors duration-300">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

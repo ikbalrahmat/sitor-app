@@ -149,15 +149,15 @@ export default function Pengaturan() {
   };
 
   return (
-    <div className="max-w-5xl dark:text-white transition-colors duration-300 font-sans">
+    <div className="max-w-5xl transition-colors duration-300 font-sans">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pengaturan</h1>
-        <p className="text-gray-600 dark:text-gray-300">Kelola profil dan konfigurasi keamanan akun Anda</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Pengaturan</h1>
+        <p className="text-gray-600 ">Kelola profil dan konfigurasi keamanan akun Anda</p>
       </div>
 
       {/* Area Notifikasi Error / Sukses */}
       {message && (
-        <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${message.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'}`}>
+        <div className={`mb-6 p-4 rounded-lg flex items-center space-x-3 ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200 ' : 'bg-red-50 text-red-700 border border-red-200 '}`}>
           {message.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
           <span className="font-medium">{message.text}</span>
         </div>
@@ -165,81 +165,81 @@ export default function Pengaturan() {
 
       <div className="space-y-6">
         {/* Profil Pengguna */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 transition-colors duration-300">
-          <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-gray-100 dark:border-slate-700">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/50 rounded-lg">
-              <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-colors duration-300">
+          <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-gray-100 ">
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <User className="w-5 h-5 text-blue-600 " />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Profil Pengguna</h2>
+            <h2 className="text-lg font-bold text-gray-900 ">Profil Pengguna</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Nama Lengkap</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Nama Lengkap</label>
               <input
                 type="text"
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="Masukkan nama lengkap"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="email@example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">NP (Nomor Pegawai)</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">NP (Nomor Pegawai)</label>
               <input
                 type="text"
                 value={np}
                 onChange={(e) => setNp(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="Masukkan nomor pegawai"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Jabatan</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Jabatan</label>
               <input
                 type="text"
                 value={jabatan}
                 onChange={(e) => setJabatan(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="Masukkan jabatan"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Unit Kerja</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Unit Kerja</label>
               <input
                 type="text"
                 value={unitKerja}
                 onChange={(e) => setUnitKerja(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="Masukkan unit kerja"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Instansi</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Instansi</label>
               <input
                 type="text"
                 value={instansi}
                 onChange={(e) => setInstansi(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="Masukkan instansi"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Status Kepegawaian</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Status Kepegawaian</label>
               <select
                 value={statusKepegawaian}
                 onChange={(e) => setStatusKepegawaian(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
               >
                 <option value="Pegawai Tetap">Pegawai Tetap</option>
                 <option value="Pegawai Kontrak / PKWT">Pegawai Kontrak / PKWT</option>
@@ -253,33 +253,33 @@ export default function Pengaturan() {
         </div>
 
         {/* Keamanan / Ganti Password */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 transition-colors duration-300">
-          <div className="flex items-center space-x-3 mb-2 pb-4 border-b border-gray-100 dark:border-slate-700">
-            <div className="p-2 bg-rose-50 dark:bg-rose-900/50 rounded-lg">
-              <Lock className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 transition-colors duration-300">
+          <div className="flex items-center space-x-3 mb-2 pb-4 border-b border-gray-100 ">
+            <div className="p-2 bg-rose-50 rounded-lg">
+              <Lock className="w-5 h-5 text-rose-600 " />
             </div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Keamanan (Ganti Password)</h2>
+            <h2 className="text-lg font-bold text-gray-900 ">Keamanan (Ganti Password)</h2>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 italic">Kosongkan kolom ini jika tidak ingin mengubah password.</p>
+          <p className="text-sm text-gray-500 mb-6 italic">Kosongkan kolom ini jika tidak ingin mengubah password.</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Password Lama</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Password Lama</label>
               <input
                 type="password"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="••••••••"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Password Baru</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Password Baru</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white dark:bg-slate-700 dark:text-white transition-colors"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-gray-50 hover:bg-white transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -290,7 +290,7 @@ export default function Pengaturan() {
         <div className="flex justify-end pt-4">
           <button 
             onClick={handleSave}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md shadow-blue-200 dark:shadow-none hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            className="flex items-center space-x-2 bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold shadow-md shadow-blue-200 hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
           >
             <Save className="w-5 h-5" />
             <span>Simpan Perubahan</span>
