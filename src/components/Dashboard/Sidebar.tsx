@@ -63,8 +63,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
       
       if (user?.role === 'Manajemen') {
-        // Manajemen (Viewer) -> Lihat Dashboard, Profil, Penilaian, dan Penugasan
-        return ['dashboard', 'unit-kompetensi', 'penugasan-audit'].includes(item.id);
+        // Manajemen (Viewer) -> Hanya lihat Dashboard
+        return ['dashboard'].includes(item.id);
       }
       
       if (user?.role === 'User') {

@@ -50,20 +50,25 @@ const CircularProgress = ({ title, valueText, percentage }: {title: string, valu
 export default function DashboardUser() {
   const { user } = useAuth();
   const [diklats, setDiklats] = useState<any[]>([]);
+  const [realTimeUser, setRealTimeUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDiklats = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const token = localStorage.getItem('token');
-        const res = await api.get('/diklat', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const [diklatRes, usersRes] = await Promise.all([
+          api.get('/diklat', { headers: { Authorization: `Bearer ${token}` } }),
+          api.get('/users', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
         
+        const latestUser = usersRes.data.find((u: any) => u.id === Number(user?.id) || u.id === user?.id);
+        if (latestUser) setRealTimeUser(latestUser);
+
         // Filter out only this user's diklat
         // Jika backend sudah memfilter otomatis berdasarkan token, baris ini sebagai double-check
-        const myDiklats = res.data.filter((d: any) => d.user_id === user?.id);
+        const myDiklats = diklatRes.data.filter((d: any) => Number(d.user_id) === Number(user?.id));
         
         const mapped = myDiklats.map((d: any) => ({
           ...d,
@@ -74,12 +79,12 @@ export default function DashboardUser() {
 
         setDiklats(mapped);
       } catch (error) {
-        console.error('Gagal mengambil riwayat sertifikat', error);
+        console.error('Gagal mengambil data dari server', error);
       } finally {
         setIsLoading(false);
       }
     };
-    if (user?.id) fetchDiklats();
+    if (user?.id) fetchData();
   }, [user?.id]);
 
   if (isLoading) {
@@ -111,12 +116,34 @@ export default function DashboardUser() {
   const expiredPercent = totalValid > 0 ? Math.round((countExpired / totalValid) * 100) : 0;
 
   // Render Status Badge di Tabel
-  const renderStatusBadge = (status: string) => {
-    if (status === 'Aktif') return <span className="px-3 py-1 bg-green-100 text-green-700 font-bold text-[10px] uppercase tracking-wider rounded-lg">AKTIF</span>;
-    if (status === 'Hampir Expired') return <span className="px-3 py-1 bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-wider rounded-lg">HAMPIR EXPIRED</span>;
-    if (status === 'Expired') return <span className="px-3 py-1 bg-red-100 text-red-700 font-bold text-[10px] uppercase tracking-wider rounded-lg">EXPIRED</span>;
-    return <span className="px-3 py-1 bg-gray-100 text-gray-500 font-bold text-[10px] uppercase tracking-wider rounded-lg">{status}</span>;
+  const renderStatusBadge = (c: any) => {
+    let badgeText = c.computedStatus;
+    let badgeStyle = "bg-slate-100 text-slate-700";
+
+    if (c.computedStatus === 'Aktif') {
+      badgeStyle = "bg-green-100 text-green-700";
+    } else if (c.computedStatus === 'Hampir Expired') {
+      badgeStyle = "bg-amber-100 text-amber-700";
+    } else if (c.computedStatus === 'Expired') {
+      badgeStyle = "bg-red-100 text-red-700";
+    } else if (c.computedStatus === 'DIRENCANAKAN') {
+      if (c.isRealized) {
+        badgeText = "Menunggu Sertifikat";
+        badgeStyle = "bg-slate-100 text-slate-600"; 
+      } else {
+        badgeText = "Direncanakan";
+        badgeStyle = "bg-blue-50 text-blue-500 border border-blue-100";
+      }
+    }
+
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badgeStyle}`}>
+        {badgeText}
+      </span>
+    );
   };
+
+  const displayUser = realTimeUser || user;
 
   return (
     <div className="space-y-6">
@@ -126,7 +153,7 @@ export default function DashboardUser() {
           <Activity className="w-64 h-64" />
         </div>
         <div className="relative z-10">
-          <h1 className="text-3xl font-black mb-2 tracking-tight">Halo, {user?.nama}!</h1>
+          <h1 className="text-3xl font-black mb-2 tracking-tight">Halo, {displayUser?.nama}!</h1>
           <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
             Ini adalah Dashboard Personal Anda. Anda dapat memantau capaian sertifikat, riwayat diklat, serta realisasi kompetensi Anda tahun ini.
           </p>
@@ -138,22 +165,22 @@ export default function DashboardUser() {
         <div className="w-full lg:w-[320px] bg-white rounded-3xl shadow-sm border border-gray-100 p-8 flex flex-col shrink-0 flex-grow-0 h-fit">
           <div className="flex flex-col items-center text-center mt-2 mb-8">
             <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 border-2 border-slate-100 shadow-md">
-              {user?.photo ? (
-                <img src={`${STORAGE_URL}/${user.photo}`} alt={user.nama} className="w-full h-full object-cover" />
+              {displayUser?.photo ? (
+                <img src={`${STORAGE_URL}/${displayUser.photo}`} alt={displayUser.nama} className="w-full h-full object-cover" />
               ) : (
                 <span className="flex items-center justify-center h-full text-4xl font-bold text-gray-400">
-                  {user?.nama?.charAt(0).toUpperCase() || 'U'}
+                  {displayUser?.nama?.charAt(0).toUpperCase() || 'U'}
                 </span>
               )}
             </div>
-            <h2 className="text-xl font-bold text-gray-900 leading-tight">{user?.nama}</h2>
-            <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest">{user?.jabatan || 'Auditor'}</p>
+            <h2 className="text-xl font-bold text-gray-900 leading-tight">{displayUser?.nama}</h2>
+            <p className="text-sm text-gray-500 mt-1 uppercase tracking-widest">{displayUser?.jabatan || 'Auditor'}</p>
           </div>
 
           <div className="space-y-4">
             <div className="bg-[#f8fafc] rounded-xl p-4 flex flex-col">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Unit Kerja</span> 
-              <span className="font-semibold text-gray-800 text-sm capitalize">{user?.unit_kerja || '-'}</span>
+              <span className="font-semibold text-gray-800 text-sm capitalize">{displayUser?.unit_kerja || '-'}</span>
             </div>
             
             <div className="bg-[#f8fafc] rounded-xl p-4 flex flex-col">
@@ -163,7 +190,7 @@ export default function DashboardUser() {
             
             <div className="bg-[#f8fafc] rounded-xl p-4 flex flex-col">
               <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Status Kepegawaian</span> 
-              <span className="font-semibold text-gray-800 text-sm">{user?.status_kepegawaian || '-'}</span>
+              <span className="font-semibold text-gray-800 text-sm">{displayUser?.status_kepegawaian || '-'}</span>
             </div>
           </div>
         </div>
@@ -203,31 +230,25 @@ export default function DashboardUser() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[#1e3a8a] text-white text-[11px] font-bold uppercase tracking-wider">
-                    <th className="px-6 py-4">Nama Program / Sertifikat</th>
-                    <th className="px-6 py-4">Jenis Program</th>
-                    <th className="px-6 py-4">Tahun</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-center">File</th>
+                  <tr className="bg-[#1e3a8a] text-white">
+                    <th className="px-6 py-4 font-semibold text-center w-1/3">Nama Program / Sertifikat</th>
+                    <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
+                    <th className="px-6 py-4 font-semibold text-center">Tahun</th>
+                    <th className="px-6 py-4 font-semibold text-center">Status</th>
+                    <th className="px-6 py-4 font-semibold text-center">File</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {diklats.map(c => {
                     const progName = (c.realisasi_diklat && c.realisasi_diklat !== '-') ? c.realisasi_diklat : 
                                      (c.rencana_diklat && c.rencana_diklat !== '-') ? c.rencana_diklat : '-';
                     return (
-                      <tr key={c.id} className="hover:bg-blue-50/20 transition-colors">
-                        <td className="px-6 py-4">
-                          <span className="text-sm font-bold text-gray-800">{progName}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">{c.jenis || '-'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-gray-600">{c.tahun || '-'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {renderStatusBadge(c.computedStatus)}
+                      <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-gray-800">{progName}</td>
+                        <td className="px-6 py-4 text-center text-gray-600">{c.jenis || '-'}</td>
+                        <td className="px-6 py-4 text-center text-gray-600">{c.tahun || '-'}</td>
+                        <td className="px-6 py-4 text-center">
+                          {renderStatusBadge(c)}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {c.sertifikat_path ? (
@@ -235,12 +256,12 @@ export default function DashboardUser() {
                               href={`${STORAGE_URL}/${c.sertifikat_path}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-800 font-bold text-xs rounded-xl transition-all"
+                              className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold transition-colors shadow-sm inline-block"
                             >
                               Lihat
                             </a>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">Tidak ada file</span>
+                            <span className="text-gray-400 text-xs italic">Tidak ada file</span>
                           )}
                         </td>
                       </tr>
@@ -248,8 +269,8 @@ export default function DashboardUser() {
                   })}
                   {diklats.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500 italic">
-                        Belum ada riwayat diklat atau sertifikasi.
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
+                        Tidak ada riwayat program.
                       </td>
                     </tr>
                   )}

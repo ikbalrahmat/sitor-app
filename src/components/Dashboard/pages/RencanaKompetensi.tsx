@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import React, { useState, useMemo, Fragment, useEffect } from 'react';
 import api, { STORAGE_URL } from '../../../lib/api';
+import { useAuth } from '../../../context/AuthContext';
 
 // Fungsi bantuan untuk menghitung status sertifikat secara otomatis
 const calculateStatus = (dateString: string) => {
@@ -39,7 +40,9 @@ export default function RencanaKompetensi() {
   const [selectedUnitKerja, setSelectedUnitKerja] = useState('Semua');
   const [isLoading, setIsLoading] = useState(false);
   
+  const { user: authUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGlobalAdd, setIsGlobalAdd] = useState(false); // Flag if opened from the top global button
   const [modalMode, setModalMode] = useState<'add_diklat' | 'edit_diklat'>('add_diklat');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedDiklat, setSelectedDiklat] = useState<any>(null);
@@ -74,10 +77,15 @@ export default function RencanaKompetensi() {
         api.get('/diklat')
       ]);
 
-      const targetUsers = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
+      const targetUsers = usersRes.data.filter((u: any) => {
+        if (authUser?.role === 'User') {
+          return u.id === Number(authUser.id); // User only sees themselves
+        }
+        return u.role === 'User' || u.role === 'Manajemen'; // Admin sees all audience
+      });
 
       const mergedData = targetUsers.map((user: any) => {
-        const userDiklats = diklatRes.data.filter((d: any) => d.user_id === user.id);
+        const userDiklats = diklatRes.data.filter((d: any) => Number(d.user_id) === Number(user.id));
         
         const formattedDiklats = userDiklats.map((d: any) => ({
           id: d.id,
@@ -194,6 +202,30 @@ export default function RencanaKompetensi() {
     setSelectedKualifikasi(kualifikasiOptions.length > 0 ? kualifikasiOptions[0] : 'Lainnya');
     setCustomKualifikasi('');
 
+    setIsGlobalAdd(false);
+    setIsModalOpen(true);
+  };
+
+  const openGlobalAddModal = () => {
+    setModalMode('add_diklat');
+    setIsGlobalAdd(true);
+    setSelectedDiklat(null);
+    setFormExpDate(''); 
+    setFormSertifikatFile(null); 
+    setFormSertifikatFileName(''); 
+
+    // Jika user adalah auditor, otomatis assign ke dirinya sendiri
+    if (authUser?.role === 'User' && personelData.length > 0) {
+      setSelectedPerson(personelData[0]);
+    } else {
+      setSelectedPerson(null); // Admin perlu memilih
+    }
+
+    setSelectedJenis(jenisOptions.length > 0 ? jenisOptions[0] : 'Lainnya');
+    setCustomJenis('');
+    setSelectedKualifikasi(kualifikasiOptions.length > 0 ? kualifikasiOptions[0] : 'Lainnya');
+    setCustomKualifikasi('');
+
     setIsModalOpen(true);
   };
 
@@ -247,7 +279,18 @@ export default function RencanaKompetensi() {
     const finalJenis = selectedJenis === 'Lainnya' ? customJenis : selectedJenis;
     const finalKualifikasi = selectedKualifikasi === 'Lainnya' ? customKualifikasi : selectedKualifikasi;
 
-    payload.append('user_id', selectedPerson.id); 
+    let targetUserId = selectedPerson?.id;
+    if (isGlobalAdd && authUser?.role !== 'User') {
+      const globalUserId = formEl.get('global_user_id');
+      if (!globalUserId) {
+        alert('Silakan pilih pegawai terlebih dahulu.');
+        setIsLoading(false);
+        return;
+      }
+      targetUserId = globalUserId;
+    }
+
+    payload.append('user_id', targetUserId); 
     payload.append('tahun', formEl.get('tahun') as string);
     payload.append('jenis', finalJenis);
     
@@ -324,11 +367,19 @@ export default function RencanaKompetensi() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Perencanaan Kompetensi</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{authUser?.role === 'User' ? 'Kompetensi Saya' : 'Perencanaan Kompetensi'}</h1>
           <p className="text-gray-600">Kelola Rencana Kerja Tahunan (RKT) dan realisasi diklat personel</p>
         </div>
-        <div className="text-sm bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100 font-medium">
-          💡 Info: Daftar pegawai ditarik otomatis dari User Management.
+        <div className="flex items-center gap-3">
+          {authUser?.role !== 'User' && (
+            <div className="text-sm bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100 font-medium">
+              💡 Info: Daftar pegawai ditarik otomatis dari User Management.
+            </div>
+          )}
+          <button onClick={openGlobalAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center space-x-2 transition-colors shadow-sm">
+            <Plus className="w-5 h-5" />
+            <span>Tambah Kompetensi</span>
+          </button>
         </div>
       </div>
 
@@ -556,13 +607,26 @@ export default function RencanaKompetensi() {
           <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
             <div className={`p-5 border-b flex justify-between items-center text-white ${modalMode === 'edit_diklat' ? 'bg-orange-600' : 'bg-blue-600'}`}>
               <h2 className="text-xl font-bold flex items-center space-x-2">
-                {modalMode === 'edit_diklat' ? <><Edit className="w-5 h-5"/> <span>Edit Diklat & Sertifikat</span></> : <><Plus className="w-5 h-5"/> <span>Tambah Diklat ({selectedPerson?.nama})</span></>}
+                {modalMode === 'edit_diklat' ? <><Edit className="w-5 h-5"/> <span>Edit Diklat & Sertifikat</span></> : <><Plus className="w-5 h-5"/> <span>{isGlobalAdd ? 'Tambah Kompetensi Baru' : `Tambah Diklat (${selectedPerson?.nama})`}</span></>}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-black/20 rounded-full"><X className="w-5 h-5" /></button>
             </div>
             
             <div className="overflow-y-auto flex-1 p-6 bg-slate-50">
               <form id="rencanaForm" onSubmit={handleSaveSubmit} className="space-y-6">
+                
+                {/* Global Add: Pilih Pegawai (Hanya untuk Admin/Super Admin/Manajemen) */}
+                {isGlobalAdd && authUser?.role !== 'User' && (
+                  <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm border-l-4 border-l-blue-500">
+                    <label className="block text-sm font-bold text-gray-700 uppercase mb-2">Pilih Pegawai / Auditor</label>
+                    <select name="global_user_id" required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+                      <option value="">-- Pilih Pegawai --</option>
+                      {personelData.map(p => (
+                        <option key={p.id} value={p.id}>{p.nama} ({p.unitKerja})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* RENCANA DIKLAT */}

@@ -178,46 +178,19 @@ export default function PenugasanAudit() {
       isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
     }));
 
-    const allComps = competencies;
-    const realizedComps = allComps.filter((c: any) => c.isRealized);
-    const plannedComps = allComps.filter((c: any) => c.isPlanned);
-    
-    const totalPlanned = plannedComps.length;
-    const totalRealized = realizedComps.length;
-    const targetRealizedPercent = totalPlanned > 0 ? Math.min(Math.round((totalRealized / totalPlanned) * 100), 100) : (totalRealized > 0 ? 100 : 0);
-
-    const validComps = allComps.filter((c: any) => c.status !== 'DIRENCANAKAN');
-    const countSertifikasi = validComps.filter((c: any) => c.type === 'Sertifikasi').length;
-    const totalValid = validComps.length > 0 ? validComps.length : allComps.length;
-    const sertifikasiPercent = totalValid > 0 ? Math.round((countSertifikasi / totalValid) * 100) : 0;
-
-    const countAktif = validComps.filter((c: any) => c.status === 'Aktif').length;
-    const aktifPercent = totalValid > 0 ? Math.round((countAktif / totalValid) * 100) : 0;
-
-    const countWarning = validComps.filter((c: any) => c.status === 'Hampir Expired' || c.status === 'Expired').length;
-    const warningPercent = totalValid > 0 ? Math.round((countWarning / totalValid) * 100) : 0;
-
     setSelectedProfile({
+      id: auditor.id,
+      company: auditor.instansi || 'Belum Diatur',
       name: auditor.nama,
-      unit: auditor.unit_kerja || 'BELUM DIATUR',
-      pos: auditor.jabatan || 'AUDITOR',
-      status: auditor.status_keaktifan ? 'Aktif' : 'Tidak Aktif',
-      statusKepegawaian: auditor.status_kepegawaian || 'TIDAK DIKETAHUI',
-      avatar: auditor.nama.charAt(0).toUpperCase(),
+      pos: auditor.jabatan?.toUpperCase() || 'AUDITOR',
+      unit: auditor.unit_kerja?.toUpperCase() || 'UNIT KERJA',
+      status: auditor.status_keaktifan ? 'TETAP' : 'TIDAK AKTIF',
+      np: auditor.np || '-',
+      avatar: auditor.nama?.charAt(0).toUpperCase() || 'A',
       photo: auditor.photo ? `${STORAGE_URL}/${auditor.photo}` : null,
-      np: auditor.np,
-      validComps: validComps.length > 0 ? validComps : allComps,
-      allComps: allComps, // Pass all competencies for "Total Program"
-      kpi: {
-        targetRealizedPercent,
-        countSertifikasi,
-        totalValid,
-        sertifikasiPercent,
-        countAktif,
-        aktifPercent,
-        countWarning,
-        warningPercent
-      }
+      investasi: 'Rp 0',
+      email: auditor.email || '-',
+      competencies: competencies
     });
 
     setIsProfileModalOpen(true);
@@ -432,140 +405,184 @@ export default function PenugasanAudit() {
       )}
 
       {/* MODAL PROFIL PERSONEL (100% PERSIS PROFIL KOMPETENSI) */}
-      {isProfileModalOpen && selectedProfile && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div 
-            className="bg-[#f8fafc] w-full max-w-7xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex relative animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button 
-              onClick={() => setIsProfileModalOpen(false)} 
-              className="absolute top-5 right-5 z-20 p-2 bg-white hover:bg-gray-100 text-gray-500 rounded-full shadow-sm transition-all"
+      {isProfileModalOpen && selectedProfile && (() => {
+        // PERUBAHAN: Menampilkan semua program, bukan hanya yang "validComps"
+        const allComps = selectedProfile.competencies || []; 
+        const realizedComps = allComps.filter((c: any) => c.isRealized);
+        const plannedComps = allComps.filter((c: any) => c.isPlanned);
+        
+        const totalPlanned = plannedComps.length;
+        const totalRealized = realizedComps.length;
+        const targetRealizedPercent = totalPlanned > 0 ? Math.min(Math.round((totalRealized / totalPlanned) * 100), 100) : (totalRealized > 0 ? 100 : 0);
+
+        // Untuk chart tetap menggunakan validComps (yang ada sertifikat) agar perhitungannya akurat
+        const validComps = allComps.filter((c: any) => c.status !== 'DIRENCANAKAN');
+        const totalValid = validComps.length;
+
+        const countAktif = validComps.filter((c: any) => c.status === 'Aktif').length;
+        const aktifPercent = totalValid > 0 ? Math.round((countAktif / totalValid) * 100) : 0;
+
+        const countHampirExpired = validComps.filter((c: any) => c.status === 'Hampir Expired').length;
+        const hampirExpiredPercent = totalValid > 0 ? Math.round((countHampirExpired / totalValid) * 100) : 0;
+
+        const countExpired = validComps.filter((c: any) => c.status === 'Expired').length;
+        const expiredPercent = totalValid > 0 ? Math.round((countExpired / totalValid) * 100) : 0;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div 
+              className="bg-[#f8fafc] w-full max-w-7xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex relative animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="w-5 h-5" />
-            </button>
+              <button 
+                onClick={() => setIsProfileModalOpen(false)} 
+                className="absolute top-5 right-5 z-20 p-2 bg-white hover:bg-gray-100 text-gray-500 rounded-full shadow-sm transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            {/* SIDEBAR KIRI */}
-            <div className="w-[300px] bg-white border-r border-gray-200 p-6 flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
-              
-              <div className="flex flex-col items-center text-center mt-6 mb-8">
-                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 border border-gray-200 flex items-center justify-center">
-                  {selectedProfile.photo ? (
-                    <img src={selectedProfile.photo} alt={selectedProfile.name} className="w-full h-full object-cover grayscale" />
-                  ) : (
-                    <span className="flex items-center justify-center h-full text-[56px] font-bold text-gray-400">{selectedProfile.avatar}</span>
-                  )}
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">{selectedProfile.name}</h2>
-                <p className="text-sm text-gray-500 mt-1 capitalize">{selectedProfile.statusKepegawaian.toLowerCase()}</p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
-                  <span className="text-gray-500">Unit:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.unit}</span>
-                </div>
+              <div className="w-[300px] bg-white border-r border-gray-200 p-6 flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
                 
-                <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
-                  <span className="text-gray-500">Total Program:</span> 
-                  <span className="font-semibold text-gray-800 ml-1">
-                    {selectedProfile.allComps?.length || 0}
-                  </span>
+                <div className="flex flex-col items-center text-center mt-6 mb-8">
+                  <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 border border-gray-200">
+                    {selectedProfile.photo ? (
+                      <img src={selectedProfile.photo} alt={selectedProfile.name} className="w-full h-full object-cover grayscale" />
+                    ) : (
+                      <span className="flex items-center justify-center h-full text-4xl font-bold text-gray-400">{selectedProfile.avatar}</span>
+                    )}
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedProfile.name}</h2>
+                  <p className="text-sm text-gray-500 mt-1 capitalize">{selectedProfile.pos.toLowerCase()}</p>
                 </div>
+
+                <div className="space-y-3">
+                  <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
+                    <span className="text-gray-500">Unit:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.unit}</span>
+                  </div>
+                  
+                  <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
+                    <span className="text-gray-500">Total Program:</span> 
+                    <span className="font-semibold text-gray-800 ml-1">
+                      {allComps.length}
+                    </span>
+                  </div>
+                  
+                  <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
+                    <span className="text-gray-500">Status:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                 
-                <div className="bg-[#f0f4f8] rounded-lg p-3 text-[13px]">
-                  <span className="text-gray-500">Status:</span> <span className="font-semibold text-gray-800 ml-1">{selectedProfile.status}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  
+                  <CircularProgress 
+                    title="Target vs Realisasi Kompetensi" 
+                    valueText={`${targetRealizedPercent}%`} 
+                    percentage={targetRealizedPercent} 
+                  />
+
+                  <CircularProgress 
+                    title="Sertifikat Aktif" 
+                    valueText={countAktif.toString()} 
+                    percentage={aktifPercent} 
+                  />
+
+                  <CircularProgress 
+                    title="Sertifikat Hampir Expired" 
+                    valueText={countHampirExpired.toString()} 
+                    percentage={hampirExpiredPercent} 
+                  />
+
+                  <CircularProgress 
+                    title="Sertifikat Expired" 
+                    valueText={countExpired.toString()} 
+                    percentage={expiredPercent} 
+                  />
+
                 </div>
-              </div>
-            </div>
 
-            {/* AREA KANAN */}
-            <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <CircularProgress 
-                  title="Target vs Realisasi Kompetensi" 
-                  valueText={`${selectedProfile.kpi.targetRealizedPercent}%`} 
-                  percentage={selectedProfile.kpi.targetRealizedPercent} 
-                />
-                <CircularProgress 
-                  title="Sertifikat Aktif" 
-                  valueText={selectedProfile.kpi.countAktif.toString()} 
-                  percentage={selectedProfile.kpi.aktifPercent} 
-                />
-                <CircularProgress 
-                  title="Sertifikat Hampir Expired" 
-                  valueText={selectedProfile.kpi.countWarning.toString() /* this is actually warning+expired, should adjust */} 
-                  percentage={selectedProfile.kpi.warningPercent} 
-                />
-                <CircularProgress 
-                  title="Sertifikat Expired" 
-                  valueText={selectedProfile.kpi.countWarning.toString()} 
-                  percentage={selectedProfile.kpi.warningPercent} 
-                />
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="font-bold text-lg text-gray-900">Daftar Sertifikat Auditor</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-[#1e3a8a] text-white">
-                      <tr>
-                        <th className="px-6 py-4 font-semibold text-center w-1/3">Sertifikat</th>
-                        <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
-                        <th className="px-6 py-4 font-semibold text-center">Tahun</th>
-                        <th className="px-6 py-4 font-semibold text-center">Status</th>
-                        <th className="px-6 py-4 font-semibold text-center">File</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {selectedProfile.validComps.map((c: any) => (
-                        <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-gray-800">{c.name}</td>
-                          <td className="px-6 py-4 text-center text-gray-600">{c.type}</td>
-                          <td className="px-6 py-4 text-center text-gray-600">{c.year}</td>
-                          <td className="px-6 py-4 text-center">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                              c.status === 'Aktif' ? 'bg-green-100 text-green-700' : 
-                              c.status === 'Hampir Expired' ? 'bg-amber-100 text-amber-700' : 
-                              c.status === 'Expired' ? 'bg-red-100 text-red-700' : 
-                              'bg-rose-50 text-rose-500' // Untuk "-" atau "DIRENCANAKAN"
-                            }`}>
-                              {c.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {(c.fileLink && c.fileLink !== '-') || c.isRealized ? (
-                              <button 
-                                onClick={() => handleViewDocument(c)}
-                                className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold transition-colors"
-                              >
-                                Lihat
-                              </button>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-
-                      {selectedProfile.validComps.length === 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900">Daftar Riwayat Program & Sertifikat</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-[#1e3a8a] text-white">
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
-                            Tidak ada sertifikat/program terverifikasi.
-                          </td>
+                          <th className="px-6 py-4 font-semibold text-center w-1/3">Nama Program / Sertifikat</th>
+                          <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
+                          <th className="px-6 py-4 font-semibold text-center">Tahun</th>
+                          <th className="px-6 py-4 font-semibold text-center">Status</th>
+                          <th className="px-6 py-4 font-semibold text-center">File</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {allComps.map((c: any) => {
+                          
+                          let badgeText = c.status;
+                          let badgeStyle = "bg-slate-100 text-slate-700";
 
+                          if (c.status === 'Aktif') {
+                            badgeStyle = "bg-green-100 text-green-700";
+                          } else if (c.status === 'Hampir Expired') {
+                            badgeStyle = "bg-amber-100 text-amber-700";
+                          } else if (c.status === 'Expired') {
+                            badgeStyle = "bg-red-100 text-red-700";
+                          } else if (c.status === 'DIRENCANAKAN') {
+                            if (c.isRealized) {
+                              badgeText = "Menunggu Sertifikat";
+                              badgeStyle = "bg-slate-100 text-slate-600"; 
+                            } else {
+                              badgeText = "Direncanakan";
+                              badgeStyle = "bg-blue-50 text-blue-500 border border-blue-100";
+                            }
+                          }
+
+                          return (
+                            <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                              <td className="px-6 py-4 font-medium text-gray-800">{c.name}</td>
+                              <td className="px-6 py-4 text-center text-gray-600">{c.type}</td>
+                              <td className="px-6 py-4 text-center text-gray-600">{c.year}</td>
+                              <td className="px-6 py-4 text-center">
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badgeStyle}`}>
+                                  {badgeText}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                {c.fileLink && c.fileLink !== '-' ? (
+                                  <button 
+                                    onClick={() => handleViewDocument(c)}
+                                    className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-semibold transition-colors shadow-sm"
+                                  >
+                                    Lihat
+                                  </button>
+                                ) : (
+                                  <span className="text-gray-400 text-xs italic">Tidak ada file</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        {allComps.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-8 text-center text-gray-500 italic">
+                              Tidak ada riwayat program untuk auditor ini.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL PREVIEW PDF/GAMBAR */}
       {isPreviewModalOpen && previewFileData && (
