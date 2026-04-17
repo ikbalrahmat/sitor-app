@@ -43,6 +43,7 @@ export default function RencanaKompetensi() {
   const { user: authUser } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGlobalAdd, setIsGlobalAdd] = useState(false); // Flag if opened from the top global button
+  const [isAddingNewUser, setIsAddingNewUser] = useState(false); // Flag for quick-add user
   const [modalMode, setModalMode] = useState<'add_diklat' | 'edit_diklat'>('add_diklat');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const [selectedDiklat, setSelectedDiklat] = useState<any>(null);
@@ -203,12 +204,14 @@ export default function RencanaKompetensi() {
     setCustomKualifikasi('');
 
     setIsGlobalAdd(false);
+    setIsAddingNewUser(false);
     setIsModalOpen(true);
   };
 
   const openGlobalAddModal = () => {
     setModalMode('add_diklat');
     setIsGlobalAdd(true);
+    setIsAddingNewUser(false);
     setSelectedDiklat(null);
     setFormExpDate(''); 
     setFormSertifikatFile(null); 
@@ -281,13 +284,50 @@ export default function RencanaKompetensi() {
 
     let targetUserId = selectedPerson?.id;
     if (isGlobalAdd && authUser?.role !== 'User') {
-      const globalUserId = formEl.get('global_user_id');
-      if (!globalUserId) {
-        alert('Silakan pilih pegawai terlebih dahulu.');
-        setIsLoading(false);
-        return;
+      if (isAddingNewUser) {
+        // Logika Quick-Add User (Profil Dummy)
+        const newUserName = formEl.get('new_user_name') as string;
+        const dummyEmail = `dummy_${Date.now()}@sitor.local`;
+        const userPayload = {
+          nama: newUserName,
+          email: dummyEmail,
+          jabatan: formEl.get('new_user_jabatan') as string || '-',
+          instansi: formEl.get('new_user_instansi') === 'Lainnya' ? (formEl.get('custom_new_instansi') as string || '-') : (formEl.get('new_user_instansi') as string || '-'),
+          unit_kerja: formEl.get('new_user_unit') === 'Lainnya' ? (formEl.get('custom_new_unit') as string || '-') : (formEl.get('new_user_unit') as string || '-'),
+          np: formEl.get('new_user_np') as string || '-',
+          role: 'User',
+          status_keaktifan: 'Tidak Aktif',
+          password: 'dummy_password_123!'
+        };
+        try {
+          await api.post('/users', userPayload);
+          
+          // Cari ID user yang baru saja dibuat berdasarkan email dummy-nya
+          const allUsersRes = await api.get('/users');
+          const newlyCreated = allUsersRes.data.find((u:any) => u.email === dummyEmail);
+          
+          if (newlyCreated) {
+            targetUserId = newlyCreated.id;
+          } else {
+            alert('Terjadi kesalahan saat memvalidasi profil baru.');
+            setIsLoading(false);
+            return;
+          }
+        } catch(e) {
+          console.error('Gagal membuat profil dummy', e);
+          alert('Gagal membuat profil pegawai baru.');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        const globalUserId = formEl.get('global_user_id');
+        if (!globalUserId) {
+          alert('Silakan pilih pegawai terlebih dahulu.');
+          setIsLoading(false);
+          return;
+        }
+        targetUserId = globalUserId;
       }
-      targetUserId = globalUserId;
     }
 
     payload.append('user_id', targetUserId); 
@@ -618,13 +658,73 @@ export default function RencanaKompetensi() {
                 {/* Global Add: Pilih Pegawai (Hanya untuk Admin/Super Admin/Manajemen) */}
                 {isGlobalAdd && authUser?.role !== 'User' && (
                   <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm border-l-4 border-l-blue-500">
-                    <label className="block text-sm font-bold text-gray-700 uppercase mb-2">Pilih Pegawai / Auditor</label>
-                    <select name="global_user_id" required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
-                      <option value="">-- Pilih Pegawai --</option>
-                      {personelData.map(p => (
-                        <option key={p.id} value={p.id}>{p.nama} ({p.unitKerja})</option>
-                      ))}
-                    </select>
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-sm font-bold text-gray-700 uppercase">Pilih Pegawai / Auditor</label>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsAddingNewUser(!isAddingNewUser)} 
+                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${isAddingNewUser ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                      >
+                        {isAddingNewUser ? 'Batal Tambah Baru' : '+ Buat Profil Pegawai Baru'}
+                      </button>
+                    </div>
+
+                    {isAddingNewUser ? (
+                      <div className="space-y-4 p-5 bg-blue-50/40 rounded-xl border border-blue-100 mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nama Lengkap <span className="text-red-500">*</span></label>
+                            <input name="new_user_name" required placeholder="Nama Pegawai Baru" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nomor Pegawai (NP)</label>
+                            <input name="new_user_np" placeholder="Opsional" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800" />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Instansi Utama</label>
+                            <select name="new_user_instansi" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800" onChange={(e) => {
+                              const inputEl = document.getElementById('customInstansiInput');
+                              if (inputEl) inputEl.style.display = e.target.value === 'Lainnya' ? 'block' : 'none';
+                            }}>
+                              <option value="" disabled selected>-- Pilih Instansi --</option>
+                              {instansiOptions.filter(i => i !== 'Semua').map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              <option value="Lainnya">Lainnya (Input Manual)</option>
+                            </select>
+                            <input id="customInstansiInput" name="custom_new_instansi" placeholder="Ketik nama instansi manual..." className="w-full mt-2 px-4 py-2 border border-blue-300 rounded-lg outline-none bg-blue-50/30" style={{ display: 'none' }} />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Unit Kerja</label>
+                            <select name="new_user_unit" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800" onChange={(e) => {
+                              const inputEl = document.getElementById('customUnitInput');
+                              if (inputEl) inputEl.style.display = e.target.value === 'Lainnya' ? 'block' : 'none';
+                            }}>
+                              <option value="" disabled selected>-- Pilih Unit --</option>
+                              {unitKerjaOptions.filter(u => u !== 'Semua').map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                              <option value="Lainnya">Lainnya (Input Manual)</option>
+                            </select>
+                            <input id="customUnitInput" name="custom_new_unit" placeholder="Ketik unit kerja manual..." className="w-full mt-2 px-4 py-2 border border-blue-300 rounded-lg outline-none bg-blue-50/30" style={{ display: 'none' }} />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Jabatan Aktual</label>
+                            <input name="new_user_jabatan" placeholder="Contoh: Auditor Pertama, Verifikator, dll" className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium text-gray-800" />
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-blue-700 font-medium pt-1 mt-2 border-t border-blue-100">
+                          💡 Akun otomatis disiapkan dengan status "Tidak Aktif" tanpa kredensial login. Perbarui dan aktifkan di menu <span className="font-bold">User Management</span> kelak.
+                        </p>
+                      </div>
+                    ) : (
+                      <select name="global_user_id" required className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+                        <option value="">-- Pilih Pegawai --</option>
+                        {personelData.map(p => (
+                          <option key={p.id} value={p.id}>{p.nama} ({p.unitKerja})</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
                 

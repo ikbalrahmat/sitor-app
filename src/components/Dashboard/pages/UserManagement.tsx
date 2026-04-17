@@ -18,6 +18,9 @@ export default function UserManagement() {
   const [unitKerjaOptions, setUnitKerjaOptions] = useState<string[]>([]);
   const [customUnitKerja, setCustomUnitKerja] = useState('');
 
+  const [instansiOptions, setInstansiOptions] = useState<string[]>([]);
+  const [customInstansi, setCustomInstansi] = useState('');
+
   // State untuk form
   const [formData, setFormData] = useState({
     id: '',
@@ -40,10 +43,12 @@ export default function UserManagement() {
       
       const optionsSet = new Set<string>();
       const unitSet = new Set<string>();
+      const instansiSet = new Set<string>();
       
       const formattedUsers = response.data.map((u: any) => {
         if (u.status_kepegawaian) optionsSet.add(u.status_kepegawaian);
         if (u.unit_kerja) unitSet.add(u.unit_kerja);
+        if (u.instansi) instansiSet.add(u.instansi);
         return {
           id: u.id.toString(),
           nama: u.nama,
@@ -61,6 +66,7 @@ export default function UserManagement() {
       
       setStatusOptions(Array.from(optionsSet));
       setUnitKerjaOptions(Array.from(unitSet));
+      setInstansiOptions(Array.from(instansiSet));
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Gagal mengambil data users:', error);
@@ -80,16 +86,28 @@ export default function UserManagement() {
 
   const handleOpenModal = (mode: 'add' | 'edit', userData: any = null) => {
     setModalMode(mode);
+    setCustomStatus('');
+    setCustomUnitKerja('');
+    setCustomInstansi('');
+
     if (mode === 'edit' && userData) {
+      const isStatusLainnya = userData.statusKepegawaian && !statusOptions.includes(userData.statusKepegawaian);
+      const isUnitLainnya = userData.unitKerja && !unitKerjaOptions.includes(userData.unitKerja);
+      const isInstansiLainnya = userData.instansi && !instansiOptions.includes(userData.instansi);
+
+      if (isStatusLainnya) setCustomStatus(userData.statusKepegawaian);
+      if (isUnitLainnya) setCustomUnitKerja(userData.unitKerja);
+      if (isInstansiLainnya) setCustomInstansi(userData.instansi);
+
       setFormData({
         id: userData.id,
         nama: userData.nama,
         email: userData.email,
         jabatan: userData.jabatan || '',
-        instansi: userData.instansi || '',
-        unitKerja: userData.unitKerja || '',
+        instansi: isInstansiLainnya ? 'Lainnya' : (userData.instansi || ''),
+        unitKerja: isUnitLainnya ? 'Lainnya' : (userData.unitKerja || ''),
         np: userData.np || '',
-        statusKepegawaian: userData.statusKepegawaian || 'Pegawai Tetap',
+        statusKepegawaian: isStatusLainnya ? 'Lainnya' : (userData.statusKepegawaian || 'Pegawai Tetap'),
         statusKeaktifan: userData.statusKeaktifan || 'Aktif',
         role: userData.role,
         password: '',
@@ -118,13 +136,14 @@ export default function UserManagement() {
 
     const finalStatus = formData.statusKepegawaian === 'Lainnya' ? customStatus : formData.statusKepegawaian;
     const finalUnitKerja = formData.unitKerja === 'Lainnya' ? customUnitKerja : formData.unitKerja;
+    const finalInstansi = formData.instansi === 'Lainnya' ? customInstansi : formData.instansi;
     
     // Siapkan data yang dikirim ke Laravel
     const payload: any = {
       nama: formData.nama,
       email: formData.email,
       jabatan: formData.jabatan,
-      instansi: formData.instansi,
+      instansi: finalInstansi,
       unit_kerja: finalUnitKerja,
       np: formData.np,
       status_kepegawaian: finalStatus,
@@ -349,7 +368,21 @@ export default function UserManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Instansi</label>
-                  <input type="text" value={formData.instansi} onChange={(e) => setFormData({...formData, instansi: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <select value={formData.instansi} onChange={(e) => setFormData({...formData, instansi: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    <option value="" disabled>Pilih Instansi</option>
+                    {instansiOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    <option value="Lainnya">Lainnya (Input Manual)</option>
+                  </select>
+                  {formData.instansi === 'Lainnya' && (
+                    <input 
+                      type="text" 
+                      value={customInstansi} 
+                      onChange={(e) => setCustomInstansi(e.target.value)} 
+                      placeholder="Ketik nama instansi..." 
+                      className="w-full mt-2 px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50/20" 
+                      required 
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Unit Kerja</label>
