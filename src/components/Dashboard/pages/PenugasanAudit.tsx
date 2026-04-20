@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Download, Upload, Edit, Plus, Trash2 } from 'lucide-react';
 import api, { STORAGE_URL } from '../../../lib/api';
+import { useAuth } from '../../../context/AuthContext';
 
 // Tipe data untuk Status Kelayakan
 type StatusKelayakan = 'Layak Ditugaskan' | 'Perlu Penguatan' | 'Tidak Direkomendasikan';
@@ -59,6 +60,7 @@ const CircularProgress = ({ title, valueText, percentage }: {title: string, valu
 };
 
 export default function PenugasanAudit() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   
   // Data Master dari API
@@ -255,12 +257,14 @@ export default function PenugasanAudit() {
               <h2 className="text-lg font-bold text-gray-900">
                 Kompetensi Wajib untuk Penugasan: <span className="text-[#0b3c5d]">{selectedAudit}</span>
               </h2>
-              <button 
-                onClick={openReqModal}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
-              >
-                <Edit className="w-4 h-4" /> Edit Kompetensi
-              </button>
+              {user?.role !== 'Manajemen' && (
+                <button 
+                  onClick={openReqModal}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  <Edit className="w-4 h-4" /> Edit Kompetensi
+                </button>
+              )}
             </div>
             
             {currentReqs.length > 0 ? (
@@ -285,6 +289,7 @@ export default function PenugasanAudit() {
                   <tr className="bg-[#0b3c5d] text-white">
                     <th className="px-4 py-3 font-semibold">Auditor</th>
                     <th className="px-4 py-3 font-semibold">Jabatan</th>
+                    <th className="px-4 py-3 font-semibold">Instansi</th>
                     <th className="px-4 py-3 font-semibold text-center w-56">Status Kelayakan</th>
                     <th className="px-4 py-3 font-semibold text-center w-24">Detail</th>
                   </tr>
@@ -303,11 +308,13 @@ export default function PenugasanAudit() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-gray-700">{auditor.jabatan || '-'}</td>
+                          <td className="px-4 py-3 text-gray-700">{auditor.instansi || '-'}</td>
                           <td className="px-4 py-3 text-center">
                             <select
                               value={status}
+                              disabled={user?.role === 'Manajemen'}
                               onChange={(e) => handleStatusChange(auditor.id, e.target.value as StatusKelayakan)}
-                              className={`w-full text-xs font-bold px-3 py-1.5 rounded-full border outline-none cursor-pointer text-center appearance-none text-center-last transition-colors ${getDropdownStyle(status)}`}
+                              className={`w-full text-xs font-bold px-3 py-1.5 rounded-full border outline-none ${user?.role === 'Manajemen' ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'} text-center appearance-none text-center-last transition-colors ${getDropdownStyle(status)}`}
                               style={{ textAlignLast: 'center' }}
                             >
                               <option value="Layak Ditugaskan" className="bg-white text-gray-900">Layak Ditugaskan</option>
@@ -328,7 +335,7 @@ export default function PenugasanAudit() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
                         {loading ? 'Memuat data personel...' : `Tidak ada auditor yang terdaftar di Unit Kerja ${selectedAudit}.`}
                       </td>
                     </tr>

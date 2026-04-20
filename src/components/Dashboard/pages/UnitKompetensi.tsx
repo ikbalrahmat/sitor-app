@@ -7,6 +7,7 @@ import {
   Download, Upload
 } from 'lucide-react';
 import api, { STORAGE_URL } from '../../../lib/api';
+import { useAuth } from '../../../context/AuthContext';
 
 // --- FUNGSI BANTUAN UNTUK STATUS SERTIFIKAT ---
 const calculateStatus = (dateString: string) => {
@@ -60,6 +61,7 @@ const CircularProgress = ({ title, valueText, percentage }: {title: string, valu
 };
 
 export default function UnitKompetensi() {
+  const { user } = useAuth();
   const [selectedCompany, setSelectedCompany] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
@@ -345,7 +347,7 @@ export default function UnitKompetensi() {
               <tr className="bg-white text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-50">
                 <th className="px-8 py-5">Identitas Auditor</th>
                 <th className="px-8 py-5">Penempatan & Jabatan</th>
-                <th className="px-8 py-5 text-center">Status Rencana</th>
+                <th className="px-8 py-5 text-center">Status</th>
                 <th className="px-8 py-5 text-right">Aksi</th>
               </tr>
             </thead>
@@ -386,32 +388,36 @@ export default function UnitKompetensi() {
                     <td className="px-8 py-6 text-center">
                       <div className="flex items-center justify-center space-x-3">
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-black text-slate-900">{realizedCount}</span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Realisasi</span>
+                          <span className="text-lg font-black text-blue-600">{plannedCount}</span>
+                          <span className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">Rencana</span>
                         </div>
                         <div className="h-8 w-[1px] bg-slate-100"></div>
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-black text-blue-600">{plannedCount}</span>
-                          <span className="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">Rencana</span>
+                          <span className="text-lg font-black text-slate-900">{realizedCount}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Realisasi</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
-                          title="Edit Personel"
-                          className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl transition-all shadow-sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDeletePersonel(p); }}
-                          title="Hapus Personel"
-                          className="p-2.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {user?.role !== 'Manajemen' && (
+                          <>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
+                              title="Edit Personel"
+                              className="p-2.5 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl transition-all shadow-sm"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDeletePersonel(p); }}
+                              title="Hapus Personel"
+                              className="p-2.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-xl transition-all shadow-sm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                         <button 
                           onClick={() => setSelectedPerson(p)} 
                           className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-900 text-white hover:bg-blue-600 rounded-xl text-xs font-black transition-all shadow-md shadow-slate-200"

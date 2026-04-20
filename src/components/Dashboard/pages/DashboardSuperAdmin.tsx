@@ -93,7 +93,7 @@ export default function DashboardSuperAdmin() {
       </div>
 
       {/* KPI KARTU KEAMANAN */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center text-center">
           <div className="p-4 bg-indigo-50 text-indigo-600 rounded-full mb-3">
             <Users className="w-8 h-8" />
@@ -121,54 +121,9 @@ export default function DashboardSuperAdmin() {
             <p className="text-[10px] text-red-500 font-bold mt-1">Butuh penanganan!</p>
           )}
         </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col items-center text-center">
-          <div className="p-4 bg-purple-50 text-purple-600 rounded-full mb-3">
-            <ShieldCheck className="w-8 h-8" />
-          </div>
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Super Admin</p>
-          <h2 className="text-3xl font-black text-gray-900">{stats.totalSuperAdmin}</h2>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* DISTRIBUSI ROLE */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900 mb-6">Distribusi Hak Akses (Role)</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-bold text-gray-700">User (Auditor Biasa)</span>
-                <span className="font-bold text-indigo-600">{stats.totalUserBiasa}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2.5">
-                <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${(stats.totalUserBiasa / stats.totalUsers) * 100}%` }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-bold text-gray-700">Manajemen (Eksekutif)</span>
-                <span className="font-bold text-indigo-600">{stats.totalManajemen}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2.5">
-                <div className="bg-blue-400 h-2.5 rounded-full" style={{ width: `${(stats.totalManajemen / stats.totalUsers) * 100}%` }}></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-bold text-gray-700">Super Admin (IT/Keamanan)</span>
-                <span className="font-bold text-indigo-600">{stats.totalSuperAdmin}</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2.5">
-                <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: `${(stats.totalSuperAdmin / stats.totalUsers) * 100}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         {/* TINDAKAN CEPAT */}
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
           <h2 className="text-lg font-bold text-gray-900 mb-6">Tindakan Cepat</h2>

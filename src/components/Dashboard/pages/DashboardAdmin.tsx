@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Users, Award, AlertTriangle, Activity,
-  BookOpen, Bookmark
+  BookOpen, Bookmark, CheckCircle, FileText
 } from 'lucide-react';
 import api from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
@@ -27,6 +27,7 @@ export default function DashboardAdmin() {
   const [stats, setStats] = useState({
     totalAuditor: 0,
     totalSertifikat: 0,
+    totalSertifikatAktif: 0,
     totalSertifikatExpired: 0,
     totalDiklat: 0,
     totalSertifikasi: 0,
@@ -57,6 +58,7 @@ export default function DashboardAdmin() {
 
         // 2 & 3. Hitung Sertifikat dari Diklat
         let sertifikatCount = diklatData.length;
+        let aktifCount = 0;
         let expiredCount = 0;
         let diklatCount = 0;
         let sertifikasiCount = 0;
@@ -66,6 +68,8 @@ export default function DashboardAdmin() {
           // Hitung Status
           if (calculateStatus(d.tanggal_expired) === 'Expired') {
             expiredCount++;
+          } else {
+            aktifCount++;
           }
 
           const jenisLower = (d.jenis || '').toLowerCase().trim();
@@ -81,6 +85,7 @@ export default function DashboardAdmin() {
         setStats({
           totalAuditor: auditorCount,
           totalSertifikat: sertifikatCount,
+          totalSertifikatAktif: aktifCount,
           totalSertifikatExpired: expiredCount,
           totalDiklat: diklatCount,
           totalSertifikasi: sertifikasiCount,
@@ -122,24 +127,34 @@ export default function DashboardAdmin() {
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
             <Users className="w-8 h-8" />
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Auditor</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalAuditor} <span className="text-sm font-medium text-gray-500">Personel</span></h2>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalAuditor}</h2>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
+          <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl">
+            <FileText className="w-8 h-8" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Sertifikat</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikat}</h2>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-green-50 text-green-600 rounded-2xl">
-            <Award className="w-8 h-8" />
+            <CheckCircle className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Sertifikat Aktif</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikat} <span className="text-sm font-medium text-gray-500">Record</span></h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertifikat Aktif</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatAktif}</h2>
           </div>
         </div>
 
@@ -148,8 +163,8 @@ export default function DashboardAdmin() {
             <AlertTriangle className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Sertifikat Expired</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatExpired} <span className="text-sm font-medium text-gray-500">Butuh Perpanjangan</span></h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertif. Expired</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatExpired}</h2>
           </div>
         </div>
       </div>

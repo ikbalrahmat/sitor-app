@@ -58,13 +58,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       }
       
       if (user?.role === 'Admin') {
-        // Admin adalah Eksekutor, buka semua menu
-        return true;
+        // Admin adalah Eksekutor, buka semua menu kecuali Activity Log (karena log bersifat teknis/sistem)
+        return item.id !== 'activity-log';
       }
       
       if (user?.role === 'Manajemen') {
-        // Manajemen (Viewer) -> Hanya lihat Dashboard
-        return ['dashboard'].includes(item.id);
+        // Manajemen (Viewer) -> Lihat Dashboard, Profil Kompetensi, Penugasan Audit
+        return ['dashboard', 'unit-kompetensi', 'penugasan-audit'].includes(item.id);
       }
       
       if (user?.role === 'User') {
