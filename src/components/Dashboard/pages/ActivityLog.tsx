@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Activity, Search, ShieldAlert, Monitor, Clock, AlertCircle } from 'lucide-react';
+import { Activity, Search, ShieldAlert, Monitor, Clock, AlertCircle, Download, RefreshCw } from 'lucide-react';
 import api from '../../../lib/api';
+import * as XLSX from 'xlsx';
 
 export default function ActivityLog() {
   const [logs, setLogs] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchLogs();
@@ -28,6 +30,34 @@ export default function ActivityLog() {
     if (eventType.includes('FAILED') || eventType.includes('LOCKED') || eventType.includes('BLOCKED')) return 'bg-red-100 text-red-700 border-red-200';
     if (eventType.includes('PASSWORD')) return 'bg-blue-100 text-blue-700 border-blue-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  // Export ke Excel
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    
+    // Memberikan jeda waktu (animasi) sedikit agar user melihat indikator loading
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const dataToExport = filteredLogs.map(log => {
+      const logDate = new Date(log.created_at);
+      return {
+        'Waktu Akses': `${logDate.toLocaleDateString('id-ID')} ${logDate.toLocaleTimeString('id-ID')}`,
+        'Pengguna': log.user ? log.user.nama : 'Unknown User',
+        'Email': log.email,
+        'Status Event': log.event_type.replace('_', ' '),
+        'Deskripsi': log.description,
+        'IP Address': log.ip_address,
+        'User Agent': log.user_agent
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Audit Logs");
+    XLSX.writeFile(workbook, "Audit_Logs_Activity.xlsx");
+
+    setIsExporting(false);
   };
 
   // Filter pencarian
@@ -63,9 +93,33 @@ export default function ActivityLog() {
               className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:ring-4 focus:ring-blue-50 transition-all"
             />
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-white px-4 py-3 rounded-2xl border border-slate-200">
-            <Activity className="w-4 h-4 text-blue-500" />
-            <span>Menampilkan 100 Log Terbaru</span>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className={`flex items-center gap-2 text-xs font-bold text-white px-4 py-3 rounded-2xl border transition-all shadow-sm ${
+                isExporting 
+                  ? 'bg-green-800 border-green-900 cursor-not-allowed scale-95 opacity-90' 
+                  : 'bg-[#107c41] hover:bg-green-700 border-green-800 hover:scale-105'
+              }`}
+              title="Unduh Laporan Log"
+            >
+              {isExporting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-green-200" />
+                  <span className="text-green-100">Mengekspor...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 drop-shadow-sm" />
+                  <span>Export Excel</span>
+                </>
+              )}
+            </button>
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-white px-4 py-3 rounded-2xl border border-slate-200 shadow-sm">
+              <Activity className="w-4 h-4 text-blue-500" />
+              <span>Menampilkan 100 Log Terbaru</span>
+            </div>
           </div>
         </div>
 
