@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import api, { STORAGE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import ImageCropperModal from '../../common/ImageCropperModal';
 
 // --- FUNGSI BANTUAN UNTUK STATUS SERTIFIKAT ---
 const calculateStatus = (dateString: string) => {
@@ -79,6 +80,11 @@ export default function UnitKompetensi() {
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null);
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
 
+  // State untuk Cropper
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
+  const [activeCropMode, setActiveCropMode] = useState<'add' | 'edit' | null>(null);
+
   // State untuk Delete Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<any>(null);
@@ -90,6 +96,9 @@ export default function UnitKompetensi() {
     fileUrl: string;
     fileType: string;
   } | null>(null);
+
+  // State untuk Filter Tahun di Modal Profil Personel
+  const [profileYearFilter, setProfileYearFilter] = useState<string>('Semua');
 
   const [personels, setPersonels] = useState<any[]>([]);
 
@@ -108,26 +117,35 @@ export default function UnitKompetensi() {
       const mergedPersonels = targetUsers.map((user: any) => {
         const userDiklats = diklatRes.data.filter((d: any) => d.user_id === user.id);
         
-        const competencies = userDiklats.map((d: any) => ({
-          id: d.id,
-          year: d.tahun,
-          type: d.jenis,
-          name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
-                (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
-          status: d.tanggal_expired ? calculateStatus(d.tanggal_expired) : 'DIRENCANAKAN',
-          certNumber: d.nomor_sertifikat || '-',
-          fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
-          isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
-          isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
-        }));
+        const competencies = userDiklats.map((d: any) => {
+          let stat = 'DIRENCANAKAN';
+          if (d.tanggal_expired && d.tanggal_expired !== '-') {
+            stat = calculateStatus(d.tanggal_expired);
+          } else if (d.sertifikat_path) {
+            stat = 'Berlaku Selamanya';
+          }
+
+          return {
+            id: d.id,
+            year: d.tahun,
+            type: d.jenis,
+            name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
+                  (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
+            status: stat,
+            certNumber: d.nomor_sertifikat || '-',
+            fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
+            isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
+            isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
+          };
+        });
 
         return {
           id: user.id,
           company: user.instansi || 'Belum Diatur',
           name: user.nama,
-          pos: user.jabatan?.toUpperCase() || 'AUDITOR',
-          unit: user.unit_kerja?.toUpperCase() || 'UNIT KERJA',
-          status: user.status_keaktifan ? 'TETAP' : 'TIDAK AKTIF',
+          pos: user.jabatan || 'Auditor',
+          unit: user.unit_kerja || 'Unit Kerja',
+          status: user.status_kepegawaian || 'Pegawai Tetap',
           np: user.np || '-',
           avatar: user.nama?.charAt(0).toUpperCase() || 'A',
           photo: user.photo ? `${STORAGE_URL}/${user.photo}` : null,
@@ -162,18 +180,32 @@ export default function UnitKompetensi() {
 
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>, 
-    setPreviewState: (val: string | null) => void,
-    setFileState: (file: File | null) => void
+    mode: 'add' | 'edit'
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFileState(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewState(reader.result as string);
+        setTempImageSrc(reader.result as string);
+        setActiveCropMode(mode);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedFile: File, croppedImageUrl: string) => {
+    if (activeCropMode === 'add') {
+      setAddPhotoFile(croppedFile);
+      setAddPhotoPreview(croppedImageUrl);
+    } else if (activeCropMode === 'edit') {
+      setEditPhotoFile(croppedFile);
+      setEditPhotoPreview(croppedImageUrl);
+    }
+    setShowCropper(false);
+    setTempImageSrc(null);
+    setActiveCropMode(null);
   };
 
   const handleAddPersonel = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -361,9 +393,9 @@ export default function UnitKompetensi() {
                     <td className="px-8 py-6">
                       <div 
                         className="flex items-center space-x-5 cursor-pointer"
-                        onClick={() => setSelectedPerson(p)}
+                        onClick={() => { setSelectedPerson(p); setProfileYearFilter('Semua'); }}
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center font-black text-lg shadow-lg group-hover:scale-110 transition-transform overflow-hidden relative">
+                        <div className="w-12 h-12 rounded-full bg-[#0f172a] text-white flex items-center justify-center font-black text-lg shadow-lg group-hover:scale-110 transition-transform overflow-hidden relative">
                           {p.photo ? (
                             <img src={p.photo} alt={p.name} className="w-full h-full object-cover" />
                           ) : (
@@ -419,7 +451,7 @@ export default function UnitKompetensi() {
                           </>
                         )}
                         <button 
-                          onClick={() => setSelectedPerson(p)} 
+                          onClick={() => { setSelectedPerson(p); setProfileYearFilter('Semua'); }} 
                           className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-900 text-white hover:bg-blue-600 rounded-xl text-xs font-black transition-all shadow-md shadow-slate-200"
                         >
                           <span>PROFIL</span>
@@ -474,7 +506,7 @@ export default function UnitKompetensi() {
                 
                 <div className="flex flex-col items-center justify-center">
                   <div className="relative group">
-                    <div className={`w-32 h-32 rounded-[2rem] flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all ${addPhotoPreview ? '' : 'group-hover:border-blue-100 border-dashed border-slate-200'}`}>
+                    <div className={`w-32 h-32 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all ${addPhotoPreview ? '' : 'group-hover:border-blue-100 border-dashed border-slate-200'}`}>
                       {addPhotoPreview ? (
                         <img src={addPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
@@ -484,7 +516,7 @@ export default function UnitKompetensi() {
                         </div>
                       )}
                     </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setAddPhotoPreview, setAddPhotoFile)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'add')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                     {addPhotoPreview && (
                       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAddPhotoPreview(null); setAddPhotoFile(null); }} className="absolute -top-3 -right-3 z-20 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 hover:scale-110 transition-all" >
                         <Trash2 className="w-4 h-4" />
@@ -597,7 +629,7 @@ export default function UnitKompetensi() {
               <div className="p-10 space-y-8">
                 <div className="flex flex-col items-center justify-center">
                   <div className="relative group">
-                    <div className="w-32 h-32 rounded-[2rem] flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all group-hover:border-amber-100">
+                    <div className="w-32 h-32 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all group-hover:border-amber-100">
                       {editPhotoPreview ? (
                         <img src={editPhotoPreview} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
@@ -612,7 +644,7 @@ export default function UnitKompetensi() {
                         </div>
                       )}
                     </div>
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setEditPhotoPreview, setEditPhotoFile)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'edit')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                     {editPhotoPreview && (
                       <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditPhotoPreview(null); setEditPhotoFile(null); }} className="absolute -top-3 -right-3 z-20 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 hover:scale-110 transition-all" title="Hapus Foto">
                         <Trash2 className="w-4 h-4" />
@@ -681,7 +713,7 @@ export default function UnitKompetensi() {
               <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border-[8px] border-white relative overflow-hidden">
                 {personToDelete.photo ? (
                   <>
-                    <img src={personToDelete.photo} className="w-full h-full object-cover absolute inset-0 opacity-40 grayscale" />
+                    <img src={personToDelete.photo} className="w-full h-full object-cover absolute inset-0 opacity-40" />
                     <Trash2 className="w-10 h-10 relative z-10 text-red-600 drop-shadow-md" />
                   </>
                 ) : (
@@ -708,7 +740,11 @@ export default function UnitKompetensi() {
       {/* MODAL DETAIL PROFIL */}
       {selectedPerson && (() => {
         // PERUBAHAN: Menampilkan semua program, bukan hanya yang "validComps"
-        const allComps = selectedPerson.competencies || []; 
+        const allCompsOriginal = selectedPerson.competencies || []; 
+        const profileAvailableYears = ['Semua', ...Array.from(new Set(allCompsOriginal.map((c: any) => c.year).filter(Boolean))).sort((a: any, b: any) => b - a)] as string[];
+        
+        const allComps = profileYearFilter === 'Semua' ? allCompsOriginal : allCompsOriginal.filter((c: any) => c.year == profileYearFilter);
+
         const realizedComps = allComps.filter((c: any) => c.isRealized);
         const plannedComps = allComps.filter((c: any) => c.isPlanned);
         
@@ -720,7 +756,7 @@ export default function UnitKompetensi() {
         const validComps = allComps.filter((c: any) => c.status !== 'DIRENCANAKAN');
         const totalValid = validComps.length;
 
-        const countAktif = validComps.filter((c: any) => c.status === 'Aktif').length;
+        const countAktif = validComps.filter((c: any) => c.status === 'Aktif' || c.status === 'Berlaku Selamanya').length;
         const aktifPercent = totalValid > 0 ? Math.round((countAktif / totalValid) * 100) : 0;
 
         const countHampirExpired = validComps.filter((c: any) => c.status === 'Hampir Expired').length;
@@ -736,7 +772,7 @@ export default function UnitKompetensi() {
               onClick={(e) => e.stopPropagation()}
             >
               <button 
-                onClick={() => setSelectedPerson(null)} 
+                onClick={() => { setSelectedPerson(null); setProfileYearFilter('Semua'); }} 
                 className="absolute top-5 right-5 z-20 p-2 bg-white hover:bg-gray-100 text-gray-500 rounded-full shadow-sm transition-all"
               >
                 <X className="w-5 h-5" />
@@ -747,7 +783,7 @@ export default function UnitKompetensi() {
                 <div className="flex flex-col items-center text-center mt-6 mb-8">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 border border-gray-200">
                     {selectedPerson.photo ? (
-                      <img src={selectedPerson.photo} alt={selectedPerson.name} className="w-full h-full object-cover grayscale" />
+                      <img src={selectedPerson.photo} alt={selectedPerson.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="flex items-center justify-center h-full text-4xl font-bold text-gray-400">{selectedPerson.avatar}</span>
                     )}
@@ -776,6 +812,22 @@ export default function UnitKompetensi() {
 
               <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                 
+                <div className="flex justify-between items-center mb-6 pr-10">
+                  <h3 className="text-xl font-bold text-gray-900">Ringkasan Kompetensi</h3>
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm">
+                    <span className="text-sm font-semibold text-gray-500">Tahun:</span>
+                    <select 
+                      value={profileYearFilter}
+                      onChange={(e) => setProfileYearFilter(e.target.value)}
+                      className="bg-transparent text-gray-900 font-bold text-sm outline-none cursor-pointer border-none focus:ring-0 p-0"
+                    >
+                      {profileAvailableYears.map(y => (
+                        <option key={y} value={y}>{y === 'Semua' ? 'Semua Tahun' : y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                   
                   <CircularProgress 
@@ -829,6 +881,8 @@ export default function UnitKompetensi() {
 
                           if (c.status === 'Aktif') {
                             badgeStyle = "bg-green-100 text-green-700";
+                          } else if (c.status === 'Berlaku Selamanya') {
+                            badgeStyle = "bg-emerald-100 text-emerald-700";
                           } else if (c.status === 'Hampir Expired') {
                             badgeStyle = "bg-amber-100 text-amber-700";
                           } else if (c.status === 'Expired') {
@@ -942,6 +996,17 @@ export default function UnitKompetensi() {
         </div>
       )}
 
+      {showCropper && tempImageSrc && (
+        <ImageCropperModal
+          imageSrc={tempImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setTempImageSrc(null);
+            setActiveCropMode(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -84,10 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: true, requiresPasswordChange: requires_password_change };
 
     } catch (error: any) {
-      if (error.response && error.response.data && error.response.data.message) {
-        throw new Error(error.response.data.message);
+      if (error.response) {
+        // Cek secara spesifik untuk HTTP 401 Unauthorized
+        if (error.response.status === 401) {
+          throw new Error('Email atau kata sandi yang Anda masukkan salah.');
+        }
+        if (error.response.data && error.response.data.message) {
+          throw new Error(error.response.data.message);
+        }
       }
-      throw new Error('Terjadi kesalahan saat terhubung ke server database.');
+      throw new Error('Terjadi kesalahan saat terhubung ke server. Silakan coba beberapa saat lagi.');
     }
   };
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Save, Lock, User as UserIcon, AlertCircle, CheckCircle, Eye, EyeOff, Camera, Trash2 } from 'lucide-react';
 import api, { STORAGE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import ImageCropperModal from '../../common/ImageCropperModal';
 
 export default function Pengaturan() {
   const { user } = useAuth();
@@ -17,6 +18,8 @@ export default function Pengaturan() {
   // State untuk Foto Profil
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
 
   // Dynamic Status Kepegawaian
   const [statusKepegawaian, setStatusKepegawaian] = useState('Pegawai Tetap');
@@ -96,13 +99,22 @@ export default function Pengaturan() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
+        setTempImageSrc(reader.result as string);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset the file input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedFile: File, croppedImageUrl: string) => {
+    setPhotoFile(croppedFile);
+    setPhotoPreview(croppedImageUrl);
+    setShowCropper(false);
+    setTempImageSrc(null);
   };
 
   const handleSave = async () => {
@@ -200,7 +212,7 @@ export default function Pengaturan() {
             {/* Kolom Upload Foto */}
             <div className="flex flex-col items-center justify-start space-y-4">
               <div className="relative group w-full flex justify-center">
-                <div className={`w-36 h-36 rounded-[2rem] flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all ${photoPreview ? '' : 'group-hover:border-blue-100 border-dashed border-slate-200'}`}>
+                <div className={`w-36 h-36 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-xl bg-slate-50 transition-all ${photoPreview ? '' : 'group-hover:border-blue-100 border-dashed border-slate-200'}`}>
                   {photoPreview ? (
                     <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
@@ -408,6 +420,17 @@ export default function Pengaturan() {
           </button>
         </div>
       </div>
+
+      {showCropper && tempImageSrc && (
+        <ImageCropperModal
+          imageSrc={tempImageSrc}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setTempImageSrc(null);
+          }}
+        />
+      )}
     </div>
   );
 }

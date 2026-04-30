@@ -70,12 +70,21 @@ export default function DashboardUser() {
         // Jika backend sudah memfilter otomatis berdasarkan token, baris ini sebagai double-check
         const myDiklats = diklatRes.data.filter((d: any) => Number(d.user_id) === Number(user?.id));
         
-        const mapped = myDiklats.map((d: any) => ({
-          ...d,
-          computedStatus: d.tanggal_expired ? calculateStatus(d.tanggal_expired) : 'DIRENCANAKAN',
-          isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
-          isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
-        }));
+        const mapped = myDiklats.map((d: any) => {
+          let status = 'DIRENCANAKAN';
+          if (d.tanggal_expired && d.tanggal_expired !== '-') {
+            status = calculateStatus(d.tanggal_expired);
+          } else if (d.sertifikat_path) {
+            status = 'Berlaku Selamanya';
+          }
+
+          return {
+            ...d,
+            computedStatus: status,
+            isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
+            isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
+          };
+        });
 
         setDiklats(mapped);
       } catch (error) {
@@ -106,7 +115,7 @@ export default function DashboardUser() {
   const validComps = diklats.filter(c => c.computedStatus !== 'DIRENCANAKAN');
   const totalValid = validComps.length;
 
-  const countAktif = validComps.filter(c => c.computedStatus === 'Aktif').length;
+  const countAktif = validComps.filter(c => c.computedStatus === 'Aktif' || c.computedStatus === 'Berlaku Selamanya').length;
   const aktifPercent = totalValid > 0 ? Math.round((countAktif / totalValid) * 100) : 0;
 
   const countHampirExpired = validComps.filter(c => c.computedStatus === 'Hampir Expired').length;
@@ -122,6 +131,8 @@ export default function DashboardUser() {
 
     if (c.computedStatus === 'Aktif') {
       badgeStyle = "bg-green-100 text-green-700";
+    } else if (c.computedStatus === 'Berlaku Selamanya') {
+      badgeStyle = "bg-emerald-100 text-emerald-700";
     } else if (c.computedStatus === 'Hampir Expired') {
       badgeStyle = "bg-amber-100 text-amber-700";
     } else if (c.computedStatus === 'Expired') {

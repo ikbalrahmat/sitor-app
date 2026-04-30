@@ -68,152 +68,208 @@ export default function Login({ onForgotPassword }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#f8fafc] font-sans">
-      {/* Decorative Modern Background Elements */}
-      {/* Diagonal Enterprise Shape */}
-      <div className="absolute top-0 right-0 w-[150%] h-[70%] bg-gradient-to-bl from-[#0b3c5d] via-[#1d5786] to-[#0b3c5d] -skew-y-6 origin-top-right transform -translate-y-24 shadow-2xl"></div>
-      
-      {/* Tambahan Cahaya Orb agar tidak kaku */}
-      <div className="absolute top-[10%] left-[10%] w-[400px] h-[400px] bg-blue-400/20 rounded-full mix-blend-overlay filter blur-[100px] animate-pulse"></div>
-      <div className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] bg-cyan-300/20 rounded-full mix-blend-multiply filter blur-[128px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="min-h-screen flex w-full bg-white font-sans text-slate-900">
+      {/* Left Section - Branding & Decoration */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 lg:p-16">
+        {/* Background Image */}
+        <img src="/bg-peruri.jpg" alt="Peruri Background" className="absolute inset-0 w-full h-full object-cover z-0 scale-105 hover:scale-110 transition-transform duration-[20s] ease-out" />
+        
+        {/* Gradient Overlays for readability */}
+        <div className="absolute inset-0 bg-[#0b3c5d]/40 mix-blend-multiply z-0"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#041a2c] via-[#0b3c5d]/20 to-transparent z-0 opacity-80"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0b3c5d]/60 via-transparent to-transparent z-0"></div>
+        
+        {/* Dynamic Background Elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/30 rounded-full mix-blend-screen filter blur-[100px] animate-pulse z-0"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-400/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse z-0" style={{ animationDelay: '2s' }}></div>
+        
+        {/* Glassmorphic Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] z-0"></div>
 
-      <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-        <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 border border-white">
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6 relative">
-              <div className="absolute inset-0 bg-blue-100 rounded-full filter blur-xl opacity-50 scale-150"></div>
+        <div className="relative z-10">
+          <span className="text-white/90 text-xs font-bold tracking-[0.2em] uppercase drop-shadow-sm bg-white/10 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md">Portal Resmi</span>
+        </div>
+
+        <div className="relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
+          <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
+            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Kompetensi</span> Auditor
+          </h1>
+          <p className="text-blue-100/90 text-lg lg:text-xl max-w-md leading-relaxed font-medium drop-shadow-sm text-justify">
+            Sistem terintegrasi untuk memudahkan Anda mengelola kompetensi auditor SPI. Pantau kesesuaian standar, susun rencana pelatihan yang tepat sasaran, dan evaluasi laporan kinerja secara real-time.
+          </p>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between">
+          <p className="text-blue-200/60 text-sm font-medium">
+            © {new Date().getFullYear()} Si-Tor. Sistem Kompetensi Auditor.
+          </p>
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10">
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
+            <div className="w-2 h-2 rounded-full bg-cyan-400 absolute"></div>
+            <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest ml-1">System Online</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Section - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative bg-slate-50/50">
+        <div className="w-full max-w-[380px] -mt-8 sm:-mt-12 animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-10">
+          <div className="mb-4 flex flex-col items-center text-center">
+            <div className="flex flex-col items-center">
               {!imageError ? (
                 <img 
                   src="/logo-sitor.png" 
                   alt="Logo Si-Tor" 
-                  className="relative w-24 h-24 object-contain drop-shadow-xl"
+                  className="w-32 h-32 sm:w-40 sm:h-40 object-contain drop-shadow-xl mb-0.5 transition-all"
                   onError={() => setImageError(true)}
                 />
               ) : (
-                <div className="relative w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-200 mx-auto transform rotate-3">
-                  <span className="text-4xl font-black text-white -rotate-3">ST</span>
+                <div className="w-32 h-32 sm:w-40 sm:h-40 bg-[#0b3c5d] rounded-3xl flex items-center justify-center shadow-xl mb-0.5 transition-all">
+                  <span className="text-6xl font-black text-white leading-none mt-1">ST</span>
                 </div>
               )}
+              <span className="text-[#0b3c5d] text-xl font-black tracking-tight block mb-0.5">Si-Tor</span>
+              <span className="text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] block">Sistem Kompetensi Auditor</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 mb-1 tracking-tight">Login Si-Tor</h1>
-            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Sistem Kompetensi Auditor</p>
           </div>
 
-          <div className="mb-8 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/50 rounded-2xl flex items-start space-x-3 text-xs leading-relaxed text-amber-800 shadow-sm">
-            <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" />
-            <p>
-              <strong>Peringatan Keamanan:</strong> Sistem ini merupakan fasilitas terbatas. 
-              Hanya pengguna yang memiliki wewenang resmi yang diizinkan untuk masuk dan mengakses data di dalamnya.
+          <div className="mb-3 p-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-xl flex items-start gap-2 text-[10px] text-amber-900 shadow-sm transition-transform hover:-translate-y-0.5 duration-300">
+            <div className="bg-amber-100 p-1 rounded-md flex-shrink-0">
+              <ShieldAlert className="w-3 h-3 text-amber-600" />
+            </div>
+            <p className="leading-tight pt-0.5">
+              <strong className="block font-bold text-amber-950 mb-0.5">Akses Terbatas</strong>
+              Sistem ini hanya diperuntukkan bagi pengguna resmi.
             </p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl flex items-center space-x-3 text-sm text-left animate-in fade-in zoom-in duration-200 shadow-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span className="font-semibold">{error}</span>
+            <div className="mb-4 p-2.5 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-[11px] text-red-700 animate-in fade-in zoom-in duration-200 shadow-sm">
+              <div className="bg-red-100 p-1.5 rounded-md flex-shrink-0">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+              </div>
+              <span className="font-bold">{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1" htmlFor="email">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <label className="block text-xs font-bold text-slate-700" htmlFor="email">
                 Alamat Email
               </label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#0b3c5d] transition-colors">
+                  <Mail className="w-3.5 h-3.5" />
+                </div>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-400 outline-none transition-all font-bold text-slate-800 shadow-sm placeholder:text-slate-300"
+                  className="block w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
                   placeholder="admin@sitor.com"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1" htmlFor="password">
-                Kata Sandi
-              </label>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700" htmlFor="password">
+                  Kata Sandi
+                </label>
+              </div>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#0b3c5d] transition-colors">
+                  <Lock className="w-3.5 h-3.5" />
+                </div>
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-400 outline-none transition-all font-bold text-slate-800 shadow-sm placeholder:text-slate-300"
+                  className="block w-full pl-9 pr-9 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-blue-600 focus:outline-none transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
+              {onForgotPassword && (
+                <div className="flex justify-end pt-0.5">
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-[10px] font-bold text-[#0b3c5d] hover:text-blue-700 transition-colors focus:outline-none focus:underline"
+                  >
+                    Lupa password?
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">
+            <div className="space-y-1 pt-0.5">
+              <label className="block text-xs font-bold text-slate-700">
                 Verifikasi Keamanan
               </label>
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center justify-center bg-slate-100/80 border border-slate-200 rounded-2xl px-5 py-3.5 text-lg font-black text-slate-700 tracking-widest min-w-[110px] select-none shadow-inner">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1 text-sm font-black text-[#0b3c5d] tracking-widest min-w-[70px] select-none shadow-inner">
                   {captcha.num1} + {captcha.num2}
                 </div>
                 <button 
                   type="button" 
                   onClick={generateCaptcha}
-                  className="p-3.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-2xl transition-all border border-transparent hover:border-blue-100"
+                  className="p-1.5 text-slate-500 hover:text-[#0b3c5d] hover:bg-slate-100 rounded-lg transition-all border border-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0b3c5d]"
                   title="Ganti Soal"
                 >
-                  <RefreshCw className="w-5 h-5" />
+                  <RefreshCw className="w-3.5 h-3.5" />
                 </button>
                 <input
                   type="number"
                   value={captchaAnswer}
                   onChange={(e) => setCaptchaAnswer(e.target.value)}
-                  className="w-full px-4 py-3.5 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-blue-400 outline-none transition-all font-black text-center text-xl text-slate-800 shadow-sm placeholder:text-slate-300 placeholder:text-base placeholder:font-bold"
+                  className="block w-full px-3 py-1 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-black text-center text-sm text-slate-800 shadow-sm placeholder:text-slate-300 placeholder:text-[10px] placeholder:font-normal hover:border-slate-300 appearance-none"
                   placeholder="Hasil?"
                   required
                 />
               </div>
             </div>
 
-            {onForgotPassword && (
-              <div className="flex items-center justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={onForgotPassword}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
-                >
-                  Lupa password?
-                </button>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-[#0b3c5d] to-[#1d5786] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] hover:shadow-xl hover:shadow-blue-900/20 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed flex justify-center items-center mt-4"
-            >
-              {isLoading ? 'Memproses...' : 'Masuk Dashboard'}
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-[#0b3c5d] hover:bg-[#082a42] text-white py-2 rounded-xl font-bold text-xs transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:shadow-blue-900/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  'Masuk ke Sistem'
+                )}
+              </button>
+            </div>
           </form>
-        </div>
 
-        <div className="text-center mt-8 space-y-2">
-          <p className="text-slate-400 text-xs font-black uppercase tracking-widest">
-            © 2026 Si-Tor
-          </p>
-          <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider">
-            All access is monitored and logged
-          </p>
+          {/* Mobile Copyright */}
+          <div className="mt-8 text-center lg:hidden relative z-10">
+            <p className="text-[10px] text-slate-400 font-medium">
+              © {new Date().getFullYear()} Si-Tor. Sistem Kompetensi Auditor.
+            </p>
+          </div>
+        </div>
+        
+        {/* Subtle decorative background on the right side */}
+        <div className="absolute top-0 right-0 w-full h-full overflow-hidden pointer-events-none opacity-40 z-0">
+          <div className="absolute -top-[10%] -right-[10%] w-[400px] h-[400px] bg-gradient-to-br from-blue-100 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-[10%] -left-[10%] w-[300px] h-[300px] bg-gradient-to-tr from-slate-200 to-transparent rounded-full blur-3xl"></div>
         </div>
       </div>
     </div>

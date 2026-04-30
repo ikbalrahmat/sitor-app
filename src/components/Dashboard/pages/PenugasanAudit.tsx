@@ -71,20 +71,33 @@ export default function PenugasanAudit() {
   const [unitKerjas, setUnitKerjas] = useState<string[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<string>(''); // Merupakan Unit Kerja
 
-  // Data Evaluasi Per Unit Kerja dan User (Disimpan di localStorage sementara)
-  const [evaluationStatuses, setEvaluationStatuses] = useState<Record<string, Record<string | number, StatusKelayakan>>>({});
+  // Type untuk Sub-Penugasan
+  type SubAudit = {
+    id: string;
+    name: string;
+    kriteria: string;
+  };
 
-  // Data Kompetensi Wajib Per Unit Kerja (Disimpan di localStorage sementara)
-  const [kompetensiWajibMap, setKompetensiWajibMap] = useState<Record<string, string[]>>({});
+  // Data Evaluasi Per Unit Kerja -> SubAudit -> User
+  const [evaluationStatuses, setEvaluationStatuses] = useState<Record<string, Record<string, Record<string | number, StatusKelayakan>>>>({});
   
-  // State untuk Edit Kompetensi Wajib Modal
+  // Data Keterangan Per Unit Kerja -> SubAudit -> User
+  const [keteranganMap, setKeteranganMap] = useState<Record<string, Record<string, Record<string | number, string>>>>({});
+
+  // Data Penugasan (Topik Audit) Per Unit Kerja
+  const [kompetensiWajibMap, setKompetensiWajibMap] = useState<Record<string, SubAudit[]>>({});
+  const [selectedSubAudit, setSelectedSubAudit] = useState<string>('');
+  
+  // State untuk Edit Penugasan Modal
   const [showEditReqModal, setShowEditReqModal] = useState(false);
-  const [tempReqs, setTempReqs] = useState<string[]>([]);
-  const [newReq, setNewReq] = useState('');
+  const [tempReqs, setTempReqs] = useState<SubAudit[]>([]);
+  const [newReqName, setNewReqName] = useState('');
+  const [newReqKriteria, setNewReqKriteria] = useState('');
 
   // State Untuk Modal Profil Personel (Persis Profil Kompetensi)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [profileYearFilter, setProfileYearFilter] = useState<string>('Semua');
 
   // State Untuk Pratinjau Dokumen
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -97,9 +110,36 @@ export default function PenugasanAudit() {
     const savedStatusStr = localStorage.getItem('penugasanAuditStatus');
     if (savedStatusStr) setEvaluationStatuses(JSON.parse(savedStatusStr));
 
-    // Load kompetensi wajib map from local storage
+    const savedKeteranganStr = localStorage.getItem('keteranganMap');
+    if (savedKeteranganStr) setKeteranganMap(JSON.parse(savedKeteranganStr));
+
+    // Load kompetensi wajib map from local storage (Migrasi jika data lama berbentuk array string)
     const savedReqsStr = localStorage.getItem('kompetensiWajibMap');
-    if (savedReqsStr) setKompetensiWajibMap(JSON.parse(savedReqsStr));
+    if (savedReqsStr) {
+      try {
+        const parsed = JSON.parse(savedReqsStr);
+        // Cek jika data lama berbentuk array string (misal: "Audit BGN")
+        let isOldFormat = false;
+        for (const key in parsed) {
+          if (parsed[key].length > 0 && typeof parsed[key][0] === 'string') {
+            isOldFormat = true;
+            break;
+          }
+        }
+        
+        if (isOldFormat) {
+          console.warn("Mereset data Penugasan Audit karena format lama terdeteksi.");
+          localStorage.removeItem('kompetensiWajibMap');
+          localStorage.removeItem('penugasanAuditStatus');
+          localStorage.removeItem('keteranganMap');
+          localStorage.removeItem('fulfilledCriteria');
+        } else {
+          setKompetensiWajibMap(parsed);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }, []);
 
   const fetchData = async () => {
@@ -128,26 +168,60 @@ export default function PenugasanAudit() {
   };
 
   const handleStatusChange = (auditorId: string | number, newStatus: StatusKelayakan) => {
+    if (!selectedSubAudit) return;
     const updatedStatuses = { ...evaluationStatuses };
-    if (!updatedStatuses[selectedAudit]) {
-      updatedStatuses[selectedAudit] = {};
-    }
-    updatedStatuses[selectedAudit][auditorId] = newStatus;
+    if (!updatedStatuses[selectedAudit]) updatedStatuses[selectedAudit] = {};
+    if (!updatedStatuses[selectedAudit][selectedSubAudit]) updatedStatuses[selectedAudit][selectedSubAudit] = {};
+    
+    updatedStatuses[selectedAudit][selectedSubAudit][auditorId] = newStatus;
     
     setEvaluationStatuses(updatedStatuses);
     localStorage.setItem('penugasanAuditStatus', JSON.stringify(updatedStatuses));
   };
 
+  const handleKeteranganChange = (auditorId: string | number, text: string) => {
+    if (!selectedSubAudit) return;
+    const updatedKeterangan = { ...keteranganMap };
+    if (!updatedKeterangan[selectedAudit]) updatedKeterangan[selectedAudit] = {};
+    if (!updatedKeterangan[selectedAudit][selectedSubAudit]) updatedKeterangan[selectedAudit][selectedSubAudit] = {};
+    
+    updatedKeterangan[selectedAudit][selectedSubAudit][auditorId] = text;
+    
+    setKeteranganMap(updatedKeterangan);
+    localStorage.setItem('keteranganMap', JSON.stringify(updatedKeterangan));
+  };
+
+  useEffect(() => {
+    // Select first sub-audit automatically when audit unit changes
+    const reqs = kompetensiWajibMap[selectedAudit] || [];
+    if (reqs.length > 0) {
+      if (!reqs.find(r => r.id === selectedSubAudit)) {
+        setSelectedSubAudit(reqs[0].id);
+      }
+    } else {
+      setSelectedSubAudit('');
+    }
+  }, [selectedAudit, kompetensiWajibMap]);
+
   const openReqModal = () => {
     setTempReqs(kompetensiWajibMap[selectedAudit] || []);
-    setNewReq('');
+    setNewReqName('');
+    setNewReqKriteria('');
     setShowEditReqModal(true);
   };
 
   const addReq = () => {
-    if (newReq.trim()) {
-      setTempReqs([...tempReqs, newReq.trim()]);
-      setNewReq('');
+    if (newReqName.trim()) {
+      setTempReqs([
+        ...tempReqs, 
+        { 
+          id: Date.now().toString(), 
+          name: newReqName.trim(), 
+          kriteria: newReqKriteria.trim() || 'Tidak ada keterangan/kriteria khusus.' 
+        }
+      ]);
+      setNewReqName('');
+      setNewReqKriteria('');
     }
   };
 
@@ -184,9 +258,9 @@ export default function PenugasanAudit() {
       id: auditor.id,
       company: auditor.instansi || 'Belum Diatur',
       name: auditor.nama,
-      pos: auditor.jabatan?.toUpperCase() || 'AUDITOR',
-      unit: auditor.unit_kerja?.toUpperCase() || 'UNIT KERJA',
-      status: auditor.status_keaktifan ? 'TETAP' : 'TIDAK AKTIF',
+      pos: auditor.jabatan || 'Auditor',
+      unit: auditor.unit_kerja || 'Unit Kerja',
+      status: auditor.status_kepegawaian || 'Pegawai Tetap',
       np: auditor.np || '-',
       avatar: auditor.nama?.charAt(0).toUpperCase() || 'A',
       photo: auditor.photo ? `${STORAGE_URL}/${auditor.photo}` : null,
@@ -196,6 +270,7 @@ export default function PenugasanAudit() {
     });
 
     setIsProfileModalOpen(true);
+    setProfileYearFilter('Semua');
   };
 
   const getDropdownStyle = (status: StatusKelayakan) => {
@@ -250,39 +325,65 @@ export default function PenugasanAudit() {
           </div>
         </div>
 
-        {/* Card Kompetensi Wajib */}
+        {/* Card Topik Penugasan / Sub-Audit */}
         {selectedAudit && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col items-start relative">
             <div className="flex justify-between items-center w-full mb-4">
               <h2 className="text-lg font-bold text-gray-900">
-                Kompetensi Wajib untuk Penugasan: <span className="text-[#0b3c5d]">{selectedAudit}</span>
+                Topik Penugasan Audit untuk <span className="text-[#0b3c5d]">{selectedAudit}</span>
               </h2>
               {user?.role !== 'Manajemen' && (
                 <button 
                   onClick={openReqModal}
                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-semibold transition-colors"
                 >
-                  <Edit className="w-4 h-4" /> Edit Kompetensi
+                  <Edit className="w-4 h-4" /> Manajemen Penugasan
                 </button>
               )}
             </div>
             
             {currentReqs.length > 0 ? (
-              <ul className="list-disc pl-5 space-y-2 text-sm text-gray-800">
-                {currentReqs.map((req, index) => (
-                  <li key={index} className="font-medium">{req}</li>
-                ))}
-              </ul>
+              <div className="w-full">
+                <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4 mb-4">
+                  {currentReqs.map((req) => (
+                    <button
+                      key={req.id}
+                      onClick={() => setSelectedSubAudit(req.id)}
+                      className={`px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+                        selectedSubAudit === req.id 
+                          ? 'border-blue-600 text-blue-600 bg-blue-50/50' 
+                          : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                      }`}
+                    >
+                      {req.name}
+                    </button>
+                  ))}
+                </div>
+                
+                {selectedSubAudit && (
+                  <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100/50">
+                    <h3 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-1">Keterangan / Kriteria Penugasan:</h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {currentReqs.find(r => r.id === selectedSubAudit)?.kriteria || 'Tidak ada keterangan khusus.'}
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
-              <p className="text-sm text-gray-500 italic">Belum ada kompetensi wajib yang didaftarkan untuk unit kerja ini.</p>
+              <div className="w-full text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                <p className="text-sm text-gray-500 font-medium">Belum ada topik penugasan yang didaftarkan untuk unit kerja ini.</p>
+                <p className="text-xs text-gray-400 mt-1">Silakan klik "Manajemen Penugasan" untuk menambahkan.</p>
+              </div>
             )}
           </div>
         )}
 
         {/* Tabel Evaluasi Penugasan Utama */}
-        {selectedAudit && (
+        {selectedAudit && selectedSubAudit && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Evaluasi Personel Unit Kerja {selectedAudit}</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              Evaluasi Personel untuk <span className="text-[#0b3c5d]">{currentReqs.find(r => r.id === selectedSubAudit)?.name}</span>
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse">
                 <thead>
@@ -291,13 +392,14 @@ export default function PenugasanAudit() {
                     <th className="px-4 py-3 font-semibold">Jabatan</th>
                     <th className="px-4 py-3 font-semibold">Instansi</th>
                     <th className="px-4 py-3 font-semibold text-center w-56">Status Kelayakan</th>
+                    <th className="px-4 py-3 font-semibold">Keterangan</th>
                     <th className="px-4 py-3 font-semibold text-center w-24">Detail</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {currentAuditors.length > 0 ? (
                     currentAuditors.map((auditor) => {
-                      const status = evaluationStatuses[selectedAudit]?.[auditor.id] || 'Perlu Penguatan';
+                      const status = evaluationStatuses[selectedAudit]?.[selectedSubAudit]?.[auditor.id] || 'Perlu Penguatan';
 
                       return (
                         <tr key={auditor.id} className="hover:bg-gray-50 transition-colors">
@@ -322,6 +424,16 @@ export default function PenugasanAudit() {
                               <option value="Tidak Direkomendasikan" className="bg-white text-gray-900">Tidak Direkomendasikan</option>
                             </select>
                           </td>
+                          <td className="px-4 py-3">
+                            <input 
+                              type="text"
+                              value={keteranganMap[selectedAudit]?.[selectedSubAudit]?.[auditor.id] || ''}
+                              onChange={(e) => handleKeteranganChange(auditor.id, e.target.value)}
+                              disabled={user?.role === 'Manajemen'}
+                              placeholder="Keterangan..."
+                              className={`w-full min-w-[120px] px-3 py-1.5 text-xs rounded-lg border border-gray-200 outline-none focus:ring-1 focus:ring-blue-500 transition-colors ${user?.role === 'Manajemen' ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}`}
+                            />
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <button 
                               onClick={() => handleViewProfile(auditor)}
@@ -335,7 +447,7 @@ export default function PenugasanAudit() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500 bg-gray-50/50">
                         {loading ? 'Memuat data personel...' : `Tidak ada auditor yang terdaftar di Unit Kerja ${selectedAudit}.`}
                       </td>
                     </tr>
@@ -347,44 +459,52 @@ export default function PenugasanAudit() {
         )}
       </div>
 
-      {/* MODAL EDIT KOMPETENSI WAJIB */}
+      {/* MODAL EDIT PENUGASAN WAJIB */}
       {showEditReqModal && (
         <div className="fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-900">Manajemen Kompetensi Wajib</h2>
+              <h2 className="text-lg font-bold text-gray-900">Manajemen Topik Penugasan</h2>
               <button onClick={() => setShowEditReqModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="p-6">
-              <p className="text-sm text-gray-600 mb-4">Edit kompetensi yang dibutuhkan untuk unit kerja <strong>{selectedAudit}</strong>.</p>
+              <p className="text-sm text-gray-600 mb-4">Edit topik penugasan audit untuk unit kerja <strong>{selectedAudit}</strong>.</p>
               
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-col gap-2 mb-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                 <input 
                   type="text" 
-                  value={newReq} 
-                  onChange={(e) => setNewReq(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && addReq()}
-                  className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  placeholder="Ketik kompetensi baru..."
+                  value={newReqName} 
+                  onChange={(e) => setNewReqName(e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-semibold"
+                  placeholder="Nama Penugasan (Contoh: Audit BGN)"
+                />
+                <textarea 
+                  value={newReqKriteria} 
+                  onChange={(e) => setNewReqKriteria(e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none h-20"
+                  placeholder="Keterangan / Kriteria Penugasan..."
                 />
                 <button 
                   onClick={addReq}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1"
+                  className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors flex justify-center items-center gap-1"
                 >
-                  <Plus className="w-4 h-4" /> Tambah
+                  <Plus className="w-4 h-4" /> Tambah Penugasan
                 </button>
               </div>
 
               <div className="max-h-60 overflow-y-auto space-y-2 border border-gray-100 rounded-lg p-2 bg-gray-50">
                 {tempReqs.map((req, index) => (
-                  <div key={index} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                    <span className="text-sm font-medium text-gray-800">{req}</span>
-                    <button onClick={() => removeReq(index)} className="text-red-500 hover:text-red-700 p-1">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <div key={req.id || index} className="flex flex-col bg-white p-3 rounded-lg shadow-sm border border-gray-200 relative group">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-sm font-bold text-gray-800">{req.name}</span>
+                      <button onClick={() => removeReq(index)} className="text-red-400 hover:text-red-600 p-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <span className="text-xs text-gray-500">{req.kriteria}</span>
                   </div>
                 ))}
                 {tempReqs.length === 0 && (
@@ -414,7 +534,11 @@ export default function PenugasanAudit() {
       {/* MODAL PROFIL PERSONEL (100% PERSIS PROFIL KOMPETENSI) */}
       {isProfileModalOpen && selectedProfile && (() => {
         // PERUBAHAN: Menampilkan semua program, bukan hanya yang "validComps"
-        const allComps = selectedProfile.competencies || []; 
+        const allCompsOriginal = selectedProfile.competencies || []; 
+        const profileAvailableYears = ['Semua', ...Array.from(new Set(allCompsOriginal.map((c: any) => c.year).filter(Boolean))).sort((a: any, b: any) => b - a)] as string[];
+        
+        const allComps = profileYearFilter === 'Semua' ? allCompsOriginal : allCompsOriginal.filter((c: any) => c.year == profileYearFilter);
+
         const realizedComps = allComps.filter((c: any) => c.isRealized);
         const plannedComps = allComps.filter((c: any) => c.isPlanned);
         
@@ -442,7 +566,7 @@ export default function PenugasanAudit() {
               onClick={(e) => e.stopPropagation()}
             >
               <button 
-                onClick={() => setIsProfileModalOpen(false)} 
+                onClick={() => { setIsProfileModalOpen(false); setProfileYearFilter('Semua'); }} 
                 className="absolute top-5 right-5 z-20 p-2 bg-white hover:bg-gray-100 text-gray-500 rounded-full shadow-sm transition-all"
               >
                 <X className="w-5 h-5" />
@@ -453,7 +577,7 @@ export default function PenugasanAudit() {
                 <div className="flex flex-col items-center text-center mt-6 mb-8">
                   <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100 mb-4 border border-gray-200">
                     {selectedProfile.photo ? (
-                      <img src={selectedProfile.photo} alt={selectedProfile.name} className="w-full h-full object-cover grayscale" />
+                      <img src={selectedProfile.photo} alt={selectedProfile.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="flex items-center justify-center h-full text-4xl font-bold text-gray-400">{selectedProfile.avatar}</span>
                     )}
@@ -482,6 +606,22 @@ export default function PenugasanAudit() {
 
               <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                 
+                <div className="flex justify-between items-center mb-6 pr-10">
+                  <h3 className="text-xl font-bold text-gray-900">Ringkasan Kompetensi</h3>
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm">
+                    <span className="text-sm font-semibold text-gray-500">Tahun:</span>
+                    <select 
+                      value={profileYearFilter}
+                      onChange={(e) => setProfileYearFilter(e.target.value)}
+                      className="bg-transparent text-gray-900 font-bold text-sm outline-none cursor-pointer border-none focus:ring-0 p-0"
+                    >
+                      {profileAvailableYears.map(y => (
+                        <option key={y} value={y}>{y === 'Semua' ? 'Semua Tahun' : y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                   
                   <CircularProgress 

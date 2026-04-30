@@ -411,11 +411,7 @@ export default function RencanaKompetensi() {
           <p className="text-gray-600">Kelola Rencana Kerja Tahunan (RKT) dan realisasi diklat personel</p>
         </div>
         <div className="flex items-center gap-3">
-          {authUser?.role !== 'User' && (
-            <div className="text-sm bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-100 font-medium">
-              💡 Info: Daftar pegawai ditarik otomatis dari User Management.
-            </div>
-          )}
+
           <button onClick={openGlobalAddModal} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold flex items-center space-x-2 transition-colors shadow-sm">
             <Plus className="w-5 h-5" />
             <span>Tambah Kompetensi</span>
@@ -452,39 +448,39 @@ export default function RencanaKompetensi() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)] rounded-b-xl">
           <table className="w-full text-sm text-left border-collapse min-w-[2200px]">
-            <thead>
+            <thead className="sticky top-0 z-20 shadow-sm">
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wider font-bold">
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-12">NO</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32">INSTANSI</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32">UNIT KERJA</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-48">NAMA</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-16">NP</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32">JABATAN</th>
-                <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-blue-50/50 text-blue-800">RENCANA</th>
-                <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-green-50/50 text-green-800">REALISASI</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-20">TAHUN</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24">JENIS</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24">SERTIFIKAT</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-32">NO. SERTIFIKAT</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28">TGL SERTIFIKAT</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28">TGL EXPIRED</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24">STATUS SERTIFIKAT</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24">NILAI CPE/SKP</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28">BIAYA</th>
-                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-32">KUALIFIKASI</th>
-                <th colSpan={2} className="px-4 py-3 text-center w-32">AKSI</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-12 bg-gray-50">NO</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32 bg-gray-50">INSTANSI</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32 bg-gray-50">UNIT KERJA</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-48 bg-gray-50">NAMA</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-16 bg-gray-50">NP</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32 bg-gray-50">JABATAN</th>
+                <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-blue-50 text-blue-800">RENCANA</th>
+                <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-green-50 text-green-800">REALISASI</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-20 bg-gray-50">TAHUN</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">JENIS</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">SERTIFIKAT</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-32 bg-gray-50">NO. SERTIFIKAT</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28 bg-gray-50">TGL SERTIFIKAT</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28 bg-gray-50">TGL EXPIRED</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">STATUS SERTIFIKAT</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">NILAI CPE/SKP</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-28 bg-gray-50">BIAYA</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-32 bg-gray-50">KUALIFIKASI</th>
+                <th colSpan={2} className="px-4 py-3 text-center w-32 bg-gray-50 border-b border-gray-200">AKSI</th>
               </tr>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-xs uppercase tracking-wider font-bold">
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-56">DIKLAT</th>
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-40">PENYELENGGARA</th>
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-28">JADWAL</th>
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-56">DIKLAT</th>
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-40">PENYELENGGARA</th>
-                <th className="px-4 py-2 border-r border-t border-gray-200 w-28">JADWAL</th>
-                <th className="px-2 py-2 border-r border-t border-gray-200 text-center w-16">EDIT</th>
-                <th className="px-2 py-2 border-t border-gray-200 text-center w-16">TAMBAH</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-56 bg-gray-50">DIKLAT</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-40 bg-gray-50">PENYELENGGARA</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-28 bg-gray-50">JADWAL</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-56 bg-gray-50">DIKLAT</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-40 bg-gray-50">PENYELENGGARA</th>
+                <th className="px-4 py-2 border-r border-t border-gray-200 w-28 bg-gray-50">JADWAL</th>
+                <th className="px-2 py-2 border-r border-t border-gray-200 text-center w-16 bg-gray-50">EDIT</th>
+                <th className="px-2 py-2 border-t border-gray-200 text-center w-16 bg-gray-50">TAMBAH</th>
               </tr>
             </thead>
             <tbody>

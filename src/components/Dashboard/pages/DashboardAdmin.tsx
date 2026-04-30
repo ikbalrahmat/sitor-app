@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Users, Award, AlertTriangle, Activity,
   BookOpen, Bookmark, CheckCircle, FileText
@@ -24,15 +24,9 @@ export default function DashboardAdmin() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
-  const [stats, setStats] = useState({
-    totalAuditor: 0,
-    totalSertifikat: 0,
-    totalSertifikatAktif: 0,
-    totalSertifikatExpired: 0,
-    totalDiklat: 0,
-    totalSertifikasi: 0,
-    totalLainnya: 0
-  });
+  const [usersData, setUsersData] = useState<any[]>([]);
+  const [diklatData, setDiklatData] = useState<any[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>('Semua');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -46,51 +40,8 @@ export default function DashboardAdmin() {
           api.get('/diklat', config),
         ]);
 
-        const usersData = usersRes.data;
-        const diklatData = diklatRes.data;
-
-        // 1. Hitung Jumlah Auditor (Exclude Magang, PKWT, Outsourcing)
-        const excludedStatus = ['Magang', 'Pegawai Kontrak / PKWT', 'Outsourcing'];
-        const validUsers = usersData.filter((u: any) =>
-          (u.role === 'User' || u.role === 'Manajemen') && !excludedStatus.includes(u.status_kepegawaian)
-        );
-        const auditorCount = validUsers.length;
-
-        // 2 & 3. Hitung Sertifikat dari Diklat
-        let sertifikatCount = diklatData.length;
-        let aktifCount = 0;
-        let expiredCount = 0;
-        let diklatCount = 0;
-        let sertifikasiCount = 0;
-        let lainnyaCount = 0;
-
-        diklatData.forEach((d: any) => {
-          // Hitung Status
-          if (calculateStatus(d.tanggal_expired) === 'Expired') {
-            expiredCount++;
-          } else {
-            aktifCount++;
-          }
-
-          const jenisLower = (d.jenis || '').toLowerCase().trim();
-          if (jenisLower === 'diklat') {
-            diklatCount++;
-          } else if (jenisLower === 'sertifikasi') {
-            sertifikasiCount++;
-          } else {
-            lainnyaCount++;
-          }
-        });
-
-        setStats({
-          totalAuditor: auditorCount,
-          totalSertifikat: sertifikatCount,
-          totalSertifikatAktif: aktifCount,
-          totalSertifikatExpired: expiredCount,
-          totalDiklat: diklatCount,
-          totalSertifikasi: sertifikasiCount,
-          totalLainnya: lainnyaCount
-        });
+        setUsersData(usersRes.data);
+        setDiklatData(diklatRes.data);
 
       } catch (error) {
         console.error("Gagal memuat data dashboard", error);
@@ -101,6 +52,55 @@ export default function DashboardAdmin() {
 
     fetchDashboardData();
   }, []);
+
+  const availableYears = ['Semua', ...Array.from(new Set(diklatData.map(d => d.tahun).filter(Boolean))).sort((a: any, b: any) => b - a)] as string[];
+
+  const stats = useMemo(() => {
+    const excludedStatus = ['Magang', 'Pegawai Kontrak / PKWT', 'Outsourcing'];
+    const validUsers = usersData.filter((u: any) =>
+      (u.role === 'User' || u.role === 'Manajemen') && !excludedStatus.includes(u.status_kepegawaian)
+    );
+    const auditorCount = validUsers.length;
+
+    const filteredDiklat = selectedYear === 'Semua' 
+      ? diklatData 
+      : diklatData.filter(d => d.tahun == selectedYear);
+
+    let sertifikatCount = filteredDiklat.length;
+    let aktifCount = 0;
+    let expiredCount = 0;
+    let diklatCount = 0;
+    let sertifikasiCount = 0;
+    let lainnyaCount = 0;
+
+    filteredDiklat.forEach((d: any) => {
+      // Untuk mengecek expired, asumsi kita hitung dari semua data yg difilter
+      if (calculateStatus(d.tanggal_expired) === 'Expired') {
+        expiredCount++;
+      } else {
+        aktifCount++;
+      }
+
+      const jenisLower = (d.jenis || '').toLowerCase().trim();
+      if (jenisLower === 'diklat') {
+        diklatCount++;
+      } else if (jenisLower === 'sertifikasi') {
+        sertifikasiCount++;
+      } else {
+        lainnyaCount++;
+      }
+    });
+
+    return {
+      totalAuditor: auditorCount, // Auditor count tidak terpengaruh filter tahun
+      totalSertifikat: sertifikatCount,
+      totalSertifikatAktif: aktifCount,
+      totalSertifikatExpired: expiredCount,
+      totalDiklat: diklatCount,
+      totalSertifikasi: sertifikasiCount,
+      totalLainnya: lainnyaCount
+    };
+  }, [usersData, diklatData, selectedYear]);
 
   if (isLoading) {
     return (
@@ -113,16 +113,33 @@ export default function DashboardAdmin() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER GREETING */}
-      <div className="bg-gradient-to-r from-[#0b3c5d] to-[#1d5b87] rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 opacity-10 pointer-events-none">
-          <Activity className="w-64 h-64" />
-        </div>
-        <div className="relative z-10">
-          <h1 className="text-3xl font-black mb-2 tracking-tight">Selamat Datang, {user?.nama}!</h1>
-          <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
-            Ini adalah ringkasan Eksekutif Sistem Kompetensi Auditor.
-          </p>
+      {/* HEADER GREETING & FILTER TAHUN */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="bg-gradient-to-r from-[#0b3c5d] to-[#1d5b87] rounded-2xl p-8 text-white shadow-lg relative overflow-hidden flex-1 w-full">
+          <div className="absolute -top-10 -right-10 opacity-10 pointer-events-none">
+            <Activity className="w-64 h-64" />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-black mb-2 tracking-tight">Selamat Datang, {user?.nama}!</h1>
+              <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
+                Ini adalah ringkasan Eksekutif Sistem Kompetensi Auditor.
+              </p>
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-xl flex items-center gap-3">
+              <label className="text-sm font-bold text-blue-100 whitespace-nowrap">Tahun:</label>
+              <select 
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="bg-white text-[#0b3c5d] font-bold text-sm px-4 py-2 rounded-lg outline-none cursor-pointer border-none focus:ring-2 focus:ring-blue-300"
+              >
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y === 'Semua' ? 'Semua Tahun' : y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
