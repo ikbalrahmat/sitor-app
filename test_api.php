@@ -1,0 +1,1 @@
+<?php require __DIR__.'/vendor/autoload.php'; \ = require_once __DIR__.'/bootstrap/app.php'; \ = \->make(Illuminate\Contracts\Console\Kernel::class); \->bootstrap(); \ = Illuminate\Http\Request::create('/api/diklat/173', 'POST', ['_method' => 'PUT', 'kategori_sertifikat' => 'Sertifikat Kepesertaan Test']); \ = \->handle(\); echo \->getContent();

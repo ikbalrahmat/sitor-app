@@ -5,7 +5,7 @@ export default function Footer() {
         {/* Diubah jadi justify-center agar teks copyright berada di tengah karena link di kanan sudah dihapus */}
         <div className="flex justify-center items-center text-center">
           <p className="text-sm text-gray-600">
-            © 2026 Si-Tor. Sistem Kompetensi Auditor.
+            © 2026 SI-PAKAR. Sistem Penugasan Audit dan Kompetensi Auditor.
           </p>
         </div>
       </div>

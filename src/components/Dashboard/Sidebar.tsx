@@ -28,8 +28,8 @@ const menuGroups = [
     group: 'MANAJEMEN KOMPETENSI',
     items: [
       { id: 'unit-kompetensi', label: 'Profil Kompetensi', icon: BookOpen },
-      { id: 'rencana-kompetensi', label: 'Perencanaan Kompetensi', icon: ClipboardList },
       { id: 'penugasan-audit', label: 'Penugasan Audit', icon: ClipboardCheck },
+      { id: 'rencana-kompetensi', label: 'Perencanaan Kompetensi', icon: ClipboardList },
     ]
   },
   {
@@ -99,8 +99,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {!imageError ? (
                 <img 
                   src="/logo-sitor.png" 
-                  alt="Logo Si-Tor" 
-                  className="w-12 h-12 object-contain drop-shadow-sm"
+                  alt="Logo SI-PAKAR" 
+                  className="w-10 h-10 object-contain transition-all"
                   onError={() => setImageError(true)}
                 />
               ) : (
@@ -110,8 +110,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
               
               <div>
-                <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Si-Tor</h1>
-                <p className="text-[10px] text-slate-400 font-medium uppercase mt-1 tracking-wider">Sistem Kompetensi Auditor</p>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">SI-PAKAR</h1>
+                <p className="text-[10px] text-slate-400 font-medium uppercase mt-1 tracking-wider">Sistem Penugasan Audit dan Kompetensi Auditor</p>
               </div>
             </div>
             <button

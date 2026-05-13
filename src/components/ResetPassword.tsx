@@ -1,29 +1,55 @@
-import { useState } from 'react';
-import { Mail, ArrowLeft, Send, CheckCircle2, RefreshCw, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Lock, CheckCircle2, AlertCircle, RefreshCw, EyeOff, Eye } from 'lucide-react';
 import api from '../lib/api';
 
-interface ForgotPasswordProps {
-  onBackToLogin: () => void;
-}
+export default function ResetPassword() {
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
-export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
-  const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Jika tidak ada token atau email di URL, kembalikan ke login
+    if (!token || !email) {
+      navigate('/login');
+    }
+  }, [token, email, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== passwordConfirmation) {
+      setError('Konfirmasi password tidak cocok.');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
-    
+
     try {
-      await api.post('/forgot-password', { email });
-      setIsSubmitted(true);
+      await api.post('/reset-password', {
+        token,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      });
+      setIsSuccess(true);
+      // Tunggu sebentar sebelum redirect ke login
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Terjadi kesalahan saat mengirim instruksi reset.');
+      setError(err.response?.data?.message || 'Gagal mereset password. Link mungkin sudah kadaluarsa.');
     } finally {
       setIsLoading(false);
     }
@@ -31,21 +57,16 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
 
   return (
     <div className="min-h-screen flex w-full bg-white font-sans text-slate-900">
-      {/* Left Section - Branding & Decoration */}
+      {/* Left Section - Sama seperti Login */}
       <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 lg:p-16">
-        {/* Background Image */}
         <img src="/bg-peruri.jpg" alt="Peruri Background" className="absolute inset-0 w-full h-full object-cover z-0 scale-105 hover:scale-110 transition-transform duration-[20s] ease-out" />
-        
-        {/* Gradient Overlays for readability */}
         <div className="absolute inset-0 bg-[#0b3c5d]/40 mix-blend-multiply z-0"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-[#041a2c] via-[#0b3c5d]/20 to-transparent z-0 opacity-80"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-[#0b3c5d]/60 via-transparent to-transparent z-0"></div>
         
-        {/* Dynamic Background Elements */}
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/30 rounded-full mix-blend-screen filter blur-[100px] animate-pulse z-0"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-cyan-400/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse z-0" style={{ animationDelay: '2s' }}></div>
         
-        {/* Glassmorphic Grid Pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] z-0"></div>
 
         <div className="relative z-10">
@@ -54,10 +75,10 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
 
         <div className="relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
           <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
-            Pemulihan <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Akses</span> Akun
+            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Kompetensi</span> Auditor
           </h1>
-          <p className="text-blue-100/90 text-lg lg:text-xl max-w-lg leading-relaxed font-medium drop-shadow-sm text-justify">
-            Pulihkan akses akun Anda dengan aman dan cepat melalui instruksi via email terdaftar.
+          <p className="text-blue-100/90 text-lg lg:text-xl max-w-md leading-relaxed font-medium drop-shadow-sm text-justify">
+            Sistem terintegrasi untuk memudahkan Anda mengelola kompetensi auditor SPI. Pantau kesesuaian standar, susun rencana pelatihan yang tepat sasaran, dan evaluasi laporan kinerja secara real-time.
           </p>
         </div>
 
@@ -77,42 +98,27 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative bg-slate-50/50">
         <div className="w-full max-w-[380px] -mt-8 sm:-mt-12 animate-in fade-in slide-in-from-bottom-8 duration-700 relative z-10">
           
-          <button
-            onClick={onBackToLogin}
-            className="flex items-center text-slate-500 hover:text-[#0b3c5d] mb-6 transition-colors font-bold text-sm group"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-1 transition-transform" />
-            Kembali ke Login
-          </button>
-
           <div className="mb-6 flex flex-col items-center text-center">
             <div className="flex flex-col items-center">
-              {!imageError ? (
-                <img 
-                  src="/logo-sitor.png" 
-                  alt="Logo SI-PAKAR" 
-                  className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-md mb-4 transition-all"
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                <div className="w-32 h-32 sm:w-40 sm:h-40 bg-[#0b3c5d] rounded-3xl flex items-center justify-center shadow-xl mb-0.5 transition-all">
-                  <span className="text-6xl font-black text-white leading-none mt-1">ST</span>
-                </div>
-              )}
+              <img 
+                src="/logo-sitor.png" 
+                alt="Logo SI-PAKAR" 
+                className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-md mb-4 transition-all"
+              />
               <span className="text-[#0b3c5d] text-xl font-black tracking-tight block mb-0.5">SI-PAKAR</span>
               <span className="text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] block">Sistem Penugasan Audit dan Kompetensi Auditor</span>
             </div>
           </div>
 
-          {!isSubmitted ? (
+          {!isSuccess ? (
             <div className="bg-white p-5 rounded-2xl shadow-xl border border-slate-100/50">
               <div className="text-center mb-5">
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-50 text-[#0b3c5d] rounded-xl mb-3 border border-blue-100">
-                  <Mail className="w-5 h-5" />
+                  <Lock className="w-5 h-5" />
                 </div>
-                <h2 className="text-lg font-black text-slate-900 mb-1.5 tracking-tight">Lupa Password?</h2>
+                <h2 className="text-lg font-black text-slate-900 mb-1.5 tracking-tight">Buat Sandi Baru</h2>
                 <p className="text-slate-500 font-medium text-[11px] leading-relaxed px-2">
-                  Masukkan email Anda dan kami akan mengirimkan instruksi untuk reset password.
+                  Silakan masukkan kata sandi baru untuk akun <strong className="text-slate-700">{email}</strong>
                 </p>
               </div>
 
@@ -127,26 +133,59 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                 )}
                 
                 <div className="space-y-1">
-                  <label htmlFor="email" className="block text-xs font-bold text-slate-700">
-                    Alamat Email
+                  <label className="block text-xs font-bold text-slate-700">
+                    Kata Sandi Baru
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#0b3c5d] transition-colors">
-                      <Mail className="w-3.5 h-3.5" />
+                      <Lock className="w-3.5 h-3.5" />
                     </div>
                     <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="block w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
-                      placeholder="nama@email.com"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="block w-full pl-9 pr-9 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
+                      placeholder="Minimal 8 karakter"
                       required
+                      minLength={8}
                     />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Ulangi Kata Sandi Baru
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#0b3c5d] transition-colors">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <input
+                      type={showPasswordConfirm ? "text" : "password"}
+                      value={passwordConfirmation}
+                      onChange={(e) => setPasswordConfirmation(e.target.value)}
+                      className="block w-full pl-9 pr-9 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
+                      placeholder="Konfirmasi password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                      onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                    >
+                      {showPasswordConfirm ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-3">
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -155,13 +194,10 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                     {isLoading ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        Memproses...
+                        Menyimpan...
                       </>
                     ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Kirim Instruksi Reset
-                      </>
+                      'Simpan Sandi Baru'
                     )}
                   </button>
                 </div>
@@ -172,21 +208,19 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 rounded-full mb-4 border border-green-100">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
-              <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Email Terkirim!</h2>
+              <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Sandi Berhasil Diubah!</h2>
               <p className="text-slate-500 font-medium text-xs mb-6 leading-relaxed px-4">
-                Kami telah mengirimkan instruksi reset password ke <br/>
-                <strong className="text-slate-700">{email}</strong>
+                Kata sandi untuk <strong className="text-slate-700">{email}</strong> telah berhasil diperbarui. Anda akan dialihkan ke halaman login dalam beberapa detik.
               </p>
               <button
-                onClick={onBackToLogin}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm transition-colors"
+                onClick={() => navigate('/login')}
+                className="w-full bg-[#0b3c5d] hover:bg-[#082a42] text-white py-2.5 rounded-xl font-bold text-sm transition-colors shadow-lg"
               >
-                Kembali ke halaman login
+                Kembali ke Login Sekarang
               </button>
             </div>
           )}
 
-          {/* Mobile Copyright */}
           <div className="mt-8 text-center lg:hidden relative z-10">
             <p className="text-[10px] text-slate-400 font-medium">
               © {new Date().getFullYear()} SI-PAKAR. Sistem Penugasan Audit dan Kompetensi Auditor.
@@ -194,7 +228,6 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
           </div>
         </div>
         
-        {/* Subtle decorative background on the right side */}
         <div className="absolute top-0 right-0 w-full h-full overflow-hidden pointer-events-none opacity-40 z-0">
           <div className="absolute -top-[10%] -right-[10%] w-[400px] h-[400px] bg-gradient-to-br from-blue-100 to-transparent rounded-full blur-3xl"></div>
           <div className="absolute -bottom-[10%] -left-[10%] w-[300px] h-[300px] bg-gradient-to-tr from-slate-200 to-transparent rounded-full blur-3xl"></div>

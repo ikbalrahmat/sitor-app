@@ -129,6 +129,7 @@ export default function UnitKompetensi() {
             id: d.id,
             year: d.tahun,
             type: d.jenis,
+            kategori: d.kategori_sertifikat || 'Sertifikat Kepesertaan',
             name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
                   (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
             status: stat,
@@ -866,6 +867,7 @@ export default function UnitKompetensi() {
                         <tr>
                           <th className="px-6 py-4 font-semibold text-center w-1/3">Nama Program / Sertifikat</th>
                           <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
+                          <th className="px-6 py-4 font-semibold text-center">Kategori</th>
                           <th className="px-6 py-4 font-semibold text-center">Tahun</th>
                           <th className="px-6 py-4 font-semibold text-center">Status</th>
                           <th className="px-6 py-4 font-semibold text-center">File</th>
@@ -901,6 +903,11 @@ export default function UnitKompetensi() {
                             <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4 font-medium text-gray-800">{c.name}</td>
                               <td className="px-6 py-4 text-center text-gray-600">{c.type}</td>
+                              <td className="px-6 py-4 text-center text-gray-600">
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${c.kategori === 'Sertifikat Profesi' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                                  {c.kategori ? c.kategori.replace('Sertifikat ', '') : 'Kepesertaan'}
+                                </span>
+                              </td>
                               <td className="px-6 py-4 text-center text-gray-600">{c.year}</td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badgeStyle}`}>

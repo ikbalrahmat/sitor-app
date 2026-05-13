@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import IdleTimer from './components/Security/IdleTimer'; 
 import Login from './components/Login';
 import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import ChangePassword from './components/ChangePassword';
 import Dashboard from './components/Dashboard/Dashboard';
 import DashboardHome from './components/Dashboard/DashboardHome';
@@ -46,7 +47,8 @@ function AppContent() {
     /* MEMBUNGKUS ROUTES DENGAN IDLE TIMER */
     <IdleTimer>
       <Routes>
-        {/* 1. ROUTE PUBLIC (Login & Lupa Password) */}
+        {/* 1. ROUTE PUBLIC (Login, Lupa Password, Reset Password) */}
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/login"
           element={

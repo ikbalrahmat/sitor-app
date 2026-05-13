@@ -33,6 +33,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('authUser');
+    const token = localStorage.getItem('token');
+    // Jika tidak ada token, data user yang tersimpan sudah tidak valid
+    if (!token && savedUser) {
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('requiresPasswordChange');
+      return null;
+    }
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
@@ -46,11 +53,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      // Pastikan tidak ada header Authorization yang menggantung
+      delete axios.defaults.headers.common['Authorization'];
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
+      // =====================================================
+      // PENTING: Bersihkan SEMUA data sesi lama sebelum login baru
+      // Ini mencegah bug dimana data user lama (misal Deslina Pinem)
+      // masih tertinggal dan tercampur dengan sesi user baru.
+      // =====================================================
+      localStorage.removeItem('token');
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('requiresPasswordChange');
+      delete axios.defaults.headers.common['Authorization'];
+
       const response = await api.post('/login', {
         email: email,
         password: password
@@ -106,11 +126,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error saat logout server', error);
     } finally {
+      // Reset React state
       setUser(null);
       setRequiresPasswordChange(false);
-      localStorage.removeItem('authUser');
-      localStorage.removeItem('token');
-      localStorage.removeItem('requiresPasswordChange');
+
+      // =====================================================
+      // PENTING: Bersihkan SEMUA localStorage, bukan hanya data auth.
+      // Data seperti penugasanAuditStatus, keteranganMap, dll
+      // milik user lama harus ikut dihapus agar tidak bocor
+      // ke sesi user yang login berikutnya.
+      // =====================================================
+      localStorage.clear();
+
+      // Hapus Authorization header dari axios
       delete axios.defaults.headers.common['Authorization'];
     }
   };

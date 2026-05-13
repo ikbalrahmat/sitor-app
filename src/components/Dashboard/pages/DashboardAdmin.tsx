@@ -67,18 +67,26 @@ export default function DashboardAdmin() {
       : diklatData.filter(d => d.tahun == selectedYear);
 
     let sertifikatCount = filteredDiklat.length;
-    let aktifCount = 0;
-    let expiredCount = 0;
+    let sertifikatProfesiAktif = 0;
+    let sertifikatProfesiExpired = 0;
+    let sertifikatKepesertaan = 0;
+
     let diklatCount = 0;
     let sertifikasiCount = 0;
     let lainnyaCount = 0;
 
     filteredDiklat.forEach((d: any) => {
-      // Untuk mengecek expired, asumsi kita hitung dari semua data yg difilter
-      if (calculateStatus(d.tanggal_expired) === 'Expired') {
-        expiredCount++;
+      const isProfesi = d.kategori_sertifikat === 'Sertifikat Profesi';
+      const status = calculateStatus(d.tanggal_expired);
+
+      if (isProfesi) {
+        if (status === 'Expired') {
+          sertifikatProfesiExpired++;
+        } else {
+          sertifikatProfesiAktif++;
+        }
       } else {
-        aktifCount++;
+        sertifikatKepesertaan++;
       }
 
       const jenisLower = (d.jenis || '').toLowerCase().trim();
@@ -93,9 +101,9 @@ export default function DashboardAdmin() {
 
     return {
       totalAuditor: auditorCount, // Auditor count tidak terpengaruh filter tahun
-      totalSertifikat: sertifikatCount,
-      totalSertifikatAktif: aktifCount,
-      totalSertifikatExpired: expiredCount,
+      sertifikatProfesiAktif,
+      sertifikatProfesiExpired,
+      sertifikatKepesertaan,
       totalDiklat: diklatCount,
       totalSertifikasi: sertifikasiCount,
       totalLainnya: lainnyaCount
@@ -121,9 +129,9 @@ export default function DashboardAdmin() {
           </div>
           <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-black mb-2 tracking-tight">Selamat Datang, {user?.nama}!</h1>
+              <h1 className="text-3xl font-black mb-2 tracking-tight">Selamat Datang, {user?.nama}</h1>
               <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
-                Ini adalah ringkasan Eksekutif Sistem Kompetensi Auditor.
+                Ini adalah ringkasan Eksekutif Sistem Penugasan Audit dan Kompetensi Auditor.
               </p>
             </div>
             
@@ -156,22 +164,12 @@ export default function DashboardAdmin() {
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl">
-            <FileText className="w-8 h-8" />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Sertifikat</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikat}</h2>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
           <div className="p-4 bg-green-50 text-green-600 rounded-2xl">
             <CheckCircle className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertifikat Aktif</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatAktif}</h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertif. Profesi Aktif</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.sertifikatProfesiAktif}</h2>
           </div>
         </div>
 
@@ -180,8 +178,18 @@ export default function DashboardAdmin() {
             <AlertTriangle className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertif. Expired</p>
-            <h2 className="text-3xl font-black text-gray-900">{stats.totalSertifikatExpired}</h2>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertif. Profesi Expired</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.sertifikatProfesiExpired}</h2>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center space-x-4">
+          <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
+            <BookOpen className="w-8 h-8" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Sertif. Kepesertaan</p>
+            <h2 className="text-3xl font-black text-gray-900">{stats.sertifikatKepesertaan}</h2>
           </div>
         </div>
       </div>

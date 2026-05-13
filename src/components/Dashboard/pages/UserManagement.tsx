@@ -410,7 +410,11 @@ export default function UserManagement() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Status Kepegawaian</label>
                   <select value={formData.statusKepegawaian} onChange={(e) => setFormData({...formData, statusKepegawaian: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    {statusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    {(() => {
+                      const defaultOpts = ['Pegawai Tetap', 'Pegawai Kontrak / PKWT', 'Magang', 'Outsourcing'];
+                      const merged = Array.from(new Set([...defaultOpts, ...statusOptions]));
+                      return merged.map(opt => <option key={opt} value={opt}>{opt}</option>);
+                    })()}
                     <option value="Lainnya">Lainnya (Input Manual)</option>
                   </select>
                   {formData.statusKepegawaian === 'Lainnya' && (

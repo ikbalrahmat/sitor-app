@@ -83,7 +83,7 @@ export default function DashboardSuperAdmin() {
           <div>
             <h1 className="text-3xl font-black mb-2 tracking-tight">System Administrator</h1>
             <p className="text-red-100 font-medium max-w-2xl text-sm leading-relaxed">
-              Halo, {user?.nama}! Anda memiliki akses penuh ke pengaturan akun dan konfigurasi sistem SITOR. Awasi metrik keamanan secara berkala.
+              Halo, {user?.nama}. Anda memiliki akses penuh ke pengaturan akun dan konfigurasi sistem SI-PAKAR. Awasi metrik keamanan secara berkala.
             </p>
           </div>
           <div className="hidden md:flex p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30">

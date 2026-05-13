@@ -92,16 +92,16 @@ export default function Login({ onForgotPassword }: LoginProps) {
 
         <div className="relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
           <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
-            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Kompetensi</span> Auditor
+            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Penugasan Audit</span> <br/>& Kompetensi Auditor
           </h1>
           <p className="text-blue-100/90 text-lg lg:text-xl max-w-md leading-relaxed font-medium drop-shadow-sm text-justify">
-            Sistem terintegrasi untuk memudahkan Anda mengelola kompetensi auditor SPI. Pantau kesesuaian standar, susun rencana pelatihan yang tepat sasaran, dan evaluasi laporan kinerja secara real-time.
+            Sistem terintegrasi untuk mengelola kompetensi dan penugasan auditor SPI. Pantau keahlian, susun rencana pelatihan, dan distribusikan tugas audit secara real-time.
           </p>
         </div>
 
         <div className="relative z-10 flex items-center justify-between">
           <p className="text-blue-200/60 text-sm font-medium">
-            © {new Date().getFullYear()} Si-Tor. Sistem Kompetensi Auditor.
+            © {new Date().getFullYear()} SI-PAKAR. Sistem Penugasan Audit dan Kompetensi Auditor.
           </p>
           <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10">
             <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
@@ -119,8 +119,8 @@ export default function Login({ onForgotPassword }: LoginProps) {
               {!imageError ? (
                 <img 
                   src="/logo-sitor.png" 
-                  alt="Logo Si-Tor" 
-                  className="w-32 h-32 sm:w-40 sm:h-40 object-contain drop-shadow-xl mb-0.5 transition-all"
+                  alt="Logo SI-PAKAR" 
+                  className="w-24 h-24 sm:w-28 sm:h-28 object-contain drop-shadow-md mb-4 transition-all"
                   onError={() => setImageError(true)}
                 />
               ) : (
@@ -128,8 +128,8 @@ export default function Login({ onForgotPassword }: LoginProps) {
                   <span className="text-6xl font-black text-white leading-none mt-1">ST</span>
                 </div>
               )}
-              <span className="text-[#0b3c5d] text-xl font-black tracking-tight block mb-0.5">Si-Tor</span>
-              <span className="text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] block">Sistem Kompetensi Auditor</span>
+              <span className="text-[#0b3c5d] text-xl font-black tracking-tight block mb-0.5">SI-PAKAR</span>
+              <span className="text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] block">Sistem Penugasan Audit dan Kompetensi Auditor</span>
             </div>
           </div>
 
@@ -152,7 +152,7 @@ export default function Login({ onForgotPassword }: LoginProps) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-3" autoComplete="off">
             <div className="space-y-1">
               <label className="block text-xs font-bold text-slate-700" htmlFor="email">
                 Alamat Email
@@ -164,10 +164,12 @@ export default function Login({ onForgotPassword }: LoginProps) {
                 <input
                   id="email"
                   type="email"
+                  name="login-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="off"
                   className="block w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
-                  placeholder="admin@sitor.com"
+                  placeholder="admin@sipakar.com"
                   required
                 />
               </div>
@@ -186,8 +188,10 @@ export default function Login({ onForgotPassword }: LoginProps) {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  name="login-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   className="block w-full pl-9 pr-9 py-1.5 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-semibold text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-slate-300 text-xs"
                   placeholder="••••••••"
                   required
@@ -230,9 +234,13 @@ export default function Login({ onForgotPassword }: LoginProps) {
                   <RefreshCw className="w-3.5 h-3.5" />
                 </button>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  name="captcha-answer"
                   value={captchaAnswer}
                   onChange={(e) => setCaptchaAnswer(e.target.value)}
+                  autoComplete="off"
                   className="block w-full px-3 py-1 bg-white border border-slate-200 rounded-xl focus:ring-[2px] focus:ring-blue-100 focus:border-[#0b3c5d] outline-none transition-all font-black text-center text-sm text-slate-800 shadow-sm placeholder:text-slate-300 placeholder:text-[10px] placeholder:font-normal hover:border-slate-300 appearance-none"
                   placeholder="Hasil?"
                   required
@@ -261,7 +269,7 @@ export default function Login({ onForgotPassword }: LoginProps) {
           {/* Mobile Copyright */}
           <div className="mt-8 text-center lg:hidden relative z-10">
             <p className="text-[10px] text-slate-400 font-medium">
-              © {new Date().getFullYear()} Si-Tor. Sistem Kompetensi Auditor.
+              © {new Date().getFullYear()} SI-PAKAR. Sistem Penugasan Audit dan Kompetensi Auditor.
             </p>
           </div>
         </div>

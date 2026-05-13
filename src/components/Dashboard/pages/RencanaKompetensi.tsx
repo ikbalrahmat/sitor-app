@@ -57,6 +57,7 @@ export default function RencanaKompetensi() {
   const [customJenis, setCustomJenis] = useState('');
   const [selectedKualifikasi, setSelectedKualifikasi] = useState('Lainnya');
   const [customKualifikasi, setCustomKualifikasi] = useState('');
+  const [selectedKategori, setSelectedKategori] = useState('Sertifikat Kepesertaan');
 
   // State untuk Preview Modal
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -88,9 +89,42 @@ export default function RencanaKompetensi() {
       const mergedData = targetUsers.map((user: any) => {
         const userDiklats = diklatRes.data.filter((d: any) => Number(d.user_id) === Number(user.id));
         
+        let statusKelayakan = '-';
+        let detailTopikBermasalah: string[] = [];
+        try {
+          const auditStatusStr = localStorage.getItem('penugasanAuditStatus');
+          const auditReqStr = localStorage.getItem('kompetensiWajibMap');
+          if (auditStatusStr && auditReqStr) {
+            const auditStatusMap = JSON.parse(auditStatusStr);
+            const auditReqMap = JSON.parse(auditReqStr);
+            const userStatuses = [];
+            for (const unit in auditStatusMap) {
+              for (const subAudit in auditStatusMap[unit]) {
+                const status = auditStatusMap[unit][subAudit][user.id];
+                if (status) {
+                  userStatuses.push(status);
+                  if (status === 'Perlu Penguatan' || status === 'Tidak Direkomendasikan') {
+                    const reqList = auditReqMap[unit] || [];
+                    const reqObj = reqList.find((r: any) => String(r.id) === String(subAudit));
+                    if (reqObj && !detailTopikBermasalah.includes(reqObj.name)) {
+                      detailTopikBermasalah.push(reqObj.name);
+                    }
+                  }
+                }
+              }
+            }
+            if (userStatuses.length > 0) {
+              if (userStatuses.includes('Tidak Direkomendasikan')) statusKelayakan = 'Tidak Direkomendasikan';
+              else if (userStatuses.includes('Perlu Penguatan')) statusKelayakan = 'Perlu Penguatan';
+              else if (userStatuses.includes('Layak Ditugaskan')) statusKelayakan = 'Layak Ditugaskan';
+            }
+          }
+        } catch(e) {}
+        
         const formattedDiklats = userDiklats.map((d: any) => ({
           id: d.id,
           tahun: d.tahun,
+          kategori_sertifikat: d.kategori_sertifikat || 'Sertifikat Kepesertaan',
           jenis: d.jenis,
           rencana: {
             diklat: d.rencana_diklat || '-',
@@ -118,6 +152,8 @@ export default function RencanaKompetensi() {
           nama: user.nama,
           np: user.np || '-',
           jabatan: user.jabatan || '-',
+          status_kelayakan: statusKelayakan,
+          detailTopikBermasalah: detailTopikBermasalah,
           diklatList: formattedDiklats
         };
       });
@@ -202,6 +238,7 @@ export default function RencanaKompetensi() {
     
     setSelectedKualifikasi(kualifikasiOptions.length > 0 ? kualifikasiOptions[0] : 'Lainnya');
     setCustomKualifikasi('');
+    setSelectedKategori('Sertifikat Kepesertaan');
 
     setIsGlobalAdd(false);
     setIsAddingNewUser(false);
@@ -228,6 +265,7 @@ export default function RencanaKompetensi() {
     setCustomJenis('');
     setSelectedKualifikasi(kualifikasiOptions.length > 0 ? kualifikasiOptions[0] : 'Lainnya');
     setCustomKualifikasi('');
+    setSelectedKategori('Sertifikat Kepesertaan');
 
     setIsModalOpen(true);
   };
@@ -265,6 +303,8 @@ export default function RencanaKompetensi() {
       setCustomKualifikasi(kVal !== 'Lainnya' ? kVal : '');
     }
 
+    setSelectedKategori(diklat.kategori_sertifikat || 'Sertifikat Kepesertaan');
+
     setIsModalOpen(true);
   };
 
@@ -287,7 +327,7 @@ export default function RencanaKompetensi() {
       if (isAddingNewUser) {
         // Logika Quick-Add User (Profil Dummy)
         const newUserName = formEl.get('new_user_name') as string;
-        const dummyEmail = `dummy_${Date.now()}@sitor.local`;
+        const dummyEmail = `dummy_${Date.now()}@sipakar.local`;
         const userPayload = {
           nama: newUserName,
           email: dummyEmail,
@@ -333,6 +373,7 @@ export default function RencanaKompetensi() {
     payload.append('user_id', targetUserId); 
     payload.append('tahun', formEl.get('tahun') as string);
     payload.append('jenis', finalJenis);
+    payload.append('kategori_sertifikat', selectedKategori);
     
     payload.append('rencana_diklat', formEl.get('rencana_diklat') as string || '-');
     payload.append('rencana_penyelenggara', formEl.get('rencana_penyelenggara') as string || '-');
@@ -458,9 +499,11 @@ export default function RencanaKompetensi() {
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-48 bg-gray-50">NAMA</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-16 bg-gray-50">NP</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 w-32 bg-gray-50">JABATAN</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-36 bg-gray-50">STATUS KELAYAKAN</th>
                 <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-blue-50 text-blue-800">RENCANA</th>
                 <th colSpan={3} className="px-4 py-3 border-r border-gray-200 text-center bg-green-50 text-green-800">REALISASI</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-20 bg-gray-50">TAHUN</th>
+                <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-40 bg-gray-50">KATEGORI SERTIFIKAT</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">JENIS</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-24 bg-gray-50">SERTIFIKAT</th>
                 <th rowSpan={2} className="px-4 py-3 border-r border-gray-200 text-center w-32 bg-gray-50">NO. SERTIFIKAT</th>
@@ -500,8 +543,28 @@ export default function RencanaKompetensi() {
                         <td className="px-4 py-4 border-r border-gray-200 font-bold text-gray-900 bg-white">{person.nama}</td>
                         <td className="px-4 py-4 border-r border-gray-200 text-center text-gray-500 bg-white">{person.np}</td>
                         <td className="px-4 py-4 border-r border-gray-200 text-gray-900 text-xs font-medium bg-white">{person.jabatan}</td>
+                        <td className="px-4 py-4 border-r border-gray-200 text-center align-middle bg-white">
+                          {person.status_kelayakan && person.status_kelayakan !== '-' ? (
+                            <div className="flex flex-col items-center gap-1.5">
+                              <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${person.status_kelayakan === 'Tidak Direkomendasikan' ? 'bg-[#fee2e2] text-[#991b1b] border border-[#fecaca]' : person.status_kelayakan === 'Perlu Penguatan' ? 'bg-[#ffedd5] text-[#9a3412] border border-[#fed7aa]' : 'bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]'}`}>
+                                {person.status_kelayakan}
+                              </span>
+                              {person.detailTopikBermasalah && person.detailTopikBermasalah.length > 0 && (
+                                <div className="flex flex-col items-center mt-0.5">
+                                  {person.detailTopikBermasalah.map((topik: string, idx: number) => (
+                                    <span key={idx} className="text-[9px] text-red-600 font-bold italic truncate max-w-[120px]" title={topik}>
+                                      • {topik}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic text-xs">-</span>
+                          )}
+                        </td>
                         
-                        <td colSpan={17} className="px-4 py-4 border-r border-gray-200 text-center text-gray-400 italic bg-gray-50/50">
+                        <td colSpan={19} className="px-4 py-4 border-r border-gray-200 text-center text-gray-400 italic bg-gray-50/50">
                           Belum ada data rencana atau realisasi diklat. Silakan klik tambah.
                         </td>
                         
@@ -522,7 +585,16 @@ export default function RencanaKompetensi() {
                 return (
                   <Fragment key={person.id}>
                     {person.diklatList.map((diklat: any, dIndex: number) => {
-                      const dynamicStatus = calculateStatus(diklat.tanggalExpired);
+                      let dynamicStatus = '-';
+                      if (diklat.tanggalExpired && diklat.tanggalExpired !== '-') {
+                        dynamicStatus = calculateStatus(diklat.tanggalExpired);
+                      } else if (diklat.sertifikat_path) {
+                        dynamicStatus = 'Berlaku Selamanya';
+                      } else if (diklat.realisasi.diklat && diklat.realisasi.diklat !== '-') {
+                        dynamicStatus = 'Menunggu Sertifikat';
+                      } else {
+                        dynamicStatus = 'Direncanakan';
+                      }
 
                       return (
                         <tr key={diklat.id} className="hover:bg-blue-50/20 transition-colors align-top border-b border-gray-100">
@@ -538,6 +610,26 @@ export default function RencanaKompetensi() {
                               <td rowSpan={rowCount} className="px-4 py-4 border-r border-gray-200 font-bold text-gray-900 bg-white">{person.nama}</td>
                               <td rowSpan={rowCount} className="px-4 py-4 border-r border-gray-200 text-center text-gray-500 bg-white">{person.np}</td>
                               <td rowSpan={rowCount} className="px-4 py-4 border-r border-gray-200 text-gray-900 text-xs font-medium bg-white">{person.jabatan}</td>
+                              <td rowSpan={rowCount} className="px-4 py-4 border-r border-gray-200 text-center align-middle bg-white">
+                                {person.status_kelayakan && person.status_kelayakan !== '-' ? (
+                                  <div className="flex flex-col items-center gap-1.5">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${person.status_kelayakan === 'Tidak Direkomendasikan' ? 'bg-[#fee2e2] text-[#991b1b] border border-[#fecaca]' : person.status_kelayakan === 'Perlu Penguatan' ? 'bg-[#ffedd5] text-[#9a3412] border border-[#fed7aa]' : 'bg-[#dcfce7] text-[#166534] border border-[#bbf7d0]'}`}>
+                                      {person.status_kelayakan}
+                                    </span>
+                                    {person.detailTopikBermasalah && person.detailTopikBermasalah.length > 0 && (
+                                      <div className="flex flex-col items-center mt-0.5">
+                                        {person.detailTopikBermasalah.map((topik: string, idx: number) => (
+                                          <span key={idx} className="text-[9px] text-red-600 font-bold italic truncate max-w-[120px]" title={topik}>
+                                            • {topik}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic text-xs">-</span>
+                                )}
+                              </td>
                             </>
                           )}
                           
@@ -550,6 +642,11 @@ export default function RencanaKompetensi() {
                           <td className="px-4 py-3 border-r border-gray-200 text-gray-700">{diklat.realisasi.jadwal}</td>
 
                           <td className="px-4 py-3 border-r border-gray-200 text-center font-bold text-gray-700">{diklat.tahun}</td>
+                          <td className="px-4 py-3 border-r border-gray-200 text-center text-gray-700 font-medium">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${diklat.kategori_sertifikat === 'Sertifikat Profesi' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                              {diklat.kategori_sertifikat.replace('Sertifikat ', '')}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 border-r border-gray-200 text-center text-gray-700 font-medium">
                             <span className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800">
                               {diklat.jenis}
@@ -585,7 +682,14 @@ export default function RencanaKompetensi() {
                           
                           <td className="px-4 py-3 border-r border-gray-200 text-center">
                             {dynamicStatus !== '-' ? (
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase whitespace-nowrap ${dynamicStatus === 'Aktif' ? 'bg-green-100 text-green-700' : dynamicStatus === 'Hampir Expired' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase whitespace-nowrap ${
+                                dynamicStatus === 'Aktif' ? 'bg-green-100 text-green-700' : 
+                                dynamicStatus === 'Berlaku Selamanya' ? 'bg-emerald-100 text-emerald-700' :
+                                dynamicStatus === 'Hampir Expired' ? 'bg-amber-100 text-amber-700' : 
+                                dynamicStatus === 'Expired' ? 'bg-red-100 text-red-700' :
+                                dynamicStatus === 'Menunggu Sertifikat' ? 'bg-slate-100 text-slate-600' :
+                                'bg-blue-50 text-blue-500 border border-blue-100'
+                              }`}>
                                 {dynamicStatus}
                               </span>
                             ) : (
@@ -625,7 +729,7 @@ export default function RencanaKompetensi() {
                     })}
                     
                     <tr className="bg-slate-50 border-b-2 border-gray-300">
-                      <td colSpan={13} className="px-4 py-2 border-r border-gray-200 text-right font-bold text-gray-500 uppercase text-xs tracking-wider">Total Nilai CPE/SKP ({person.nama})</td>
+                      <td colSpan={14} className="px-4 py-2 border-r border-gray-200 text-right font-bold text-gray-500 uppercase text-xs tracking-wider">Total Nilai CPE/SKP ({person.nama})</td>
                       <td className="px-4 py-2 border-r border-gray-200 text-center font-extrabold text-blue-700 bg-blue-100/50">{person.diklatList.reduce((sum: number, d: any) => sum + (Number(d.nilaiCpe) || 0), 0)} Jam</td>
                       <td colSpan={3} className="border-r border-gray-200"></td>
                     </tr>
@@ -771,10 +875,24 @@ export default function RencanaKompetensi() {
                 {/* ADMINISTRASI & SERTIFIKAT */}
                 <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
                   <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4 border-b pb-2">3. Administrasi & Dokumen Bukti</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                    {/* KATEGORI SERTIFIKAT */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kategori Sertifikat</label>
+                      <select 
+                        value={selectedKategori} 
+                        onChange={(e) => setSelectedKategori(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+                      >
+                        <option value="Sertifikat Kepesertaan">Kepesertaan</option>
+                        <option value="Sertifikat Profesi">Profesi</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tahun</label>
-                      <input name="tahun" required defaultValue={selectedDiklat?.tahun || new Date().getFullYear().toString()} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                      <input name="tahun" required defaultValue={selectedDiklat?.tahun || new Date().getFullYear().toString()} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm" />
                     </div>
                     
                     {/* DROPDOWN DINAMIS: JENIS PROGRAM */}

@@ -164,7 +164,7 @@ export default function DashboardUser() {
           <Activity className="w-64 h-64" />
         </div>
         <div className="relative z-10">
-          <h1 className="text-3xl font-black mb-2 tracking-tight">Halo, {displayUser?.nama}!</h1>
+          <h1 className="text-3xl font-black mb-2 tracking-tight">Halo, {displayUser?.nama}</h1>
           <p className="text-blue-100 font-medium max-w-2xl text-sm leading-relaxed">
             Ini adalah Dashboard Personal Anda. Anda dapat memantau capaian sertifikat, riwayat diklat, serta realisasi kompetensi Anda tahun ini.
           </p>

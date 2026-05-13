@@ -300,7 +300,7 @@ export default function PenugasanAudit() {
   return (
     <div className="bg-[#f4f6f9] min-h-screen -m-6 sm:-m-8 relative font-sans">
       <div className="bg-[#0b3c5d] text-white px-8 py-6">
-        <h1 className="text-xl font-bold mb-1">Si-Tor – Penugasan Audit Berbasis Kompetensi</h1>
+        <h1 className="text-xl font-bold mb-1">SI-PAKAR – Penugasan Audit Berbasis Kompetensi</h1>
         <p className="text-xs text-blue-100">Pemetaan dan Rekomendasi Personel Berdasarkan Unit Kerja</p>
       </div>
 
@@ -766,7 +766,7 @@ export default function PenugasanAudit() {
 
             <div className="p-5 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
               <div className="text-xs text-gray-600">
-                <span className="font-semibold">Sistem Penyimpanan Terpadu Si-Tor</span>
+                <span className="font-semibold">Sistem Penyimpanan Terpadu SI-PAKAR</span>
               </div>
               <button
                 onClick={() => window.open(previewFileData.fileUrl, '_blank')}
