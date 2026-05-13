@@ -75,7 +75,7 @@ export default function ResetPassword() {
 
         <div className="relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
           <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
-            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Kompetensi</span> Auditor
+            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Penugasan Audit</span> <br/>& Kompetensi Auditor
           </h1>
           <p className="text-blue-100/90 text-lg lg:text-xl max-w-md leading-relaxed font-medium drop-shadow-sm text-justify">
             Sistem terintegrasi untuk memudahkan Anda mengelola kompetensi auditor SPI. Pantau kesesuaian standar, susun rencana pelatihan yang tepat sasaran, dan evaluasi laporan kinerja secara real-time.
