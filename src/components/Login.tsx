@@ -70,7 +70,7 @@ export default function Login({ onForgotPassword }: LoginProps) {
   return (
     <div className="min-h-screen flex w-full bg-white font-sans text-slate-900">
       {/* Left Section - Branding & Decoration */}
-      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-between p-12 lg:p-16">
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden flex-col justify-center p-12 lg:p-16">
         {/* Background Image */}
         <img src="/bg-peruri.jpg" alt="Peruri Background" className="absolute inset-0 w-full h-full object-cover z-0 scale-105 hover:scale-110 transition-transform duration-[20s] ease-out" />
         
@@ -86,28 +86,21 @@ export default function Login({ onForgotPassword }: LoginProps) {
         {/* Glassmorphic Grid Pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:24px_24px] z-0"></div>
 
-        <div className="relative z-10">
-          <span className="text-white/90 text-xs font-bold tracking-[0.2em] uppercase drop-shadow-sm bg-white/10 px-4 py-2 rounded-full border border-white/20 backdrop-blur-md">Portal Resmi</span>
-        </div>
-
         <div className="relative z-10 animate-in fade-in slide-in-from-left-8 duration-1000 delay-300">
-          <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-4 tracking-tight drop-shadow-lg">
-            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Penugasan Audit</span> <br/>& Kompetensi Auditor
+          <h1 className="text-4xl lg:text-5xl font-black text-white leading-[1.2] mb-6 tracking-tight drop-shadow-xl max-w-2xl">
+            Sistem <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-200">Penugasan Audit</span> &amp; <br className="hidden lg:block" />
+            Kompetensi Auditor
           </h1>
-          <p className="text-blue-100/90 text-lg lg:text-xl max-w-md leading-relaxed font-medium drop-shadow-sm text-justify">
+          <p className="text-blue-100/90 text-lg lg:text-xl max-w-lg leading-relaxed font-medium drop-shadow-md text-left">
             Sistem terintegrasi untuk mengelola kompetensi dan penugasan auditor SPI. Pantau keahlian, susun rencana pelatihan, dan distribusikan tugas audit secara real-time.
           </p>
         </div>
 
-        <div className="relative z-10 flex items-center justify-between">
+        {/* Absolute positioned copyright at bottom */}
+        <div className="absolute bottom-12 left-12 lg:bottom-16 lg:left-16 z-10">
           <p className="text-blue-200/60 text-sm font-medium">
             © {new Date().getFullYear()} SI-PAKAR. Sistem Penugasan Audit dan Kompetensi Auditor.
           </p>
-          <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10">
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></div>
-            <div className="w-2 h-2 rounded-full bg-cyan-400 absolute"></div>
-            <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest ml-1">System Online</span>
-          </div>
         </div>
       </div>
 
