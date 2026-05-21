@@ -112,34 +112,6 @@ export default function PenugasanAudit() {
 
     const savedKeteranganStr = localStorage.getItem('keteranganMap');
     if (savedKeteranganStr) setKeteranganMap(JSON.parse(savedKeteranganStr));
-
-    // Load kompetensi wajib map from local storage (Migrasi jika data lama berbentuk array string)
-    const savedReqsStr = localStorage.getItem('kompetensiWajibMap');
-    if (savedReqsStr) {
-      try {
-        const parsed = JSON.parse(savedReqsStr);
-        // Cek jika data lama berbentuk array string (misal: "Audit BGN")
-        let isOldFormat = false;
-        for (const key in parsed) {
-          if (parsed[key].length > 0 && typeof parsed[key][0] === 'string') {
-            isOldFormat = true;
-            break;
-          }
-        }
-        
-        if (isOldFormat) {
-          console.warn("Mereset data Penugasan Audit karena format lama terdeteksi.");
-          localStorage.removeItem('kompetensiWajibMap');
-          localStorage.removeItem('penugasanAuditStatus');
-          localStorage.removeItem('keteranganMap');
-          localStorage.removeItem('fulfilledCriteria');
-        } else {
-          setKompetensiWajibMap(parsed);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
   }, []);
 
   const fetchData = async () => {
@@ -248,11 +220,31 @@ export default function PenugasanAudit() {
     setTempReqs(arr);
   };
 
-  const saveReqs = () => {
-    const updatedMap = { ...kompetensiWajibMap, [selectedAudit]: tempReqs };
-    setKompetensiWajibMap(updatedMap);
-    localStorage.setItem('kompetensiWajibMap', JSON.stringify(updatedMap));
-    setShowEditReqModal(false);
+  const saveReqs = async () => {
+    try {
+      // Siapkan payload untuk API
+      const payload = {
+        unit_kerja: selectedAudit,
+        penugasan_list: tempReqs.map(req => ({
+          id: req.id,
+          nama_penugasan: req.name,
+          kriteria: req.kriteria
+        }))
+      };
+
+      // Simpan ke backend
+      await api.post('/penugasan-kompetensi', payload);
+
+      // Update state lokal
+      const updatedMap = { ...kompetensiWajibMap, [selectedAudit]: tempReqs };
+      setKompetensiWajibMap(updatedMap);
+      
+      setShowEditReqModal(false);
+      alert('Topik Penugasan Audit berhasil disimpan ke server.');
+    } catch (error) {
+      console.error('Gagal menyimpan penugasan kompetensi', error);
+      alert('Gagal menyimpan data. Silakan coba lagi.');
+    }
   };
 
   const handleViewProfile = (auditor: typeof allUsers[0]) => {
