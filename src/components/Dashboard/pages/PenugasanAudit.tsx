@@ -145,14 +145,31 @@ export default function PenugasanAudit() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [usersRes, diklatRes] = await Promise.all([
+      const [usersRes, diklatRes, penugasanRes] = await Promise.all([
         api.get('/users'),
-        api.get('/diklat')
+        api.get('/diklat'),
+        api.get('/penugasan-kompetensi').catch(() => ({ data: [] }))
       ]);
 
       const users = usersRes.data.filter((u: any) => u.role === 'User' || u.role === 'Manajemen');
       setAllUsers(users);
       setAllDiklat(diklatRes.data);
+
+      // Konversi data API penugasan ke format kompetensiWajibMap
+      if (penugasanRes.data && penugasanRes.data.length > 0) {
+        const mapFromAPI: Record<string, SubAudit[]> = {};
+        penugasanRes.data.forEach((item: any) => {
+          if (!mapFromAPI[item.unit_kerja]) {
+            mapFromAPI[item.unit_kerja] = [];
+          }
+          mapFromAPI[item.unit_kerja].push({
+            id: item.id.toString(),
+            name: item.nama_penugasan,
+            kriteria: item.kriteria || 'Tidak ada keterangan/kriteria khusus.'
+          });
+        });
+        setKompetensiWajibMap(mapFromAPI);
+      }
 
       const uniqueUnits: string[] = Array.from(new Set(users.map((u: any) => u.unit_kerja).filter(Boolean)));
       setUnitKerjas(uniqueUnits);
@@ -240,19 +257,29 @@ export default function PenugasanAudit() {
 
   const handleViewProfile = (auditor: typeof allUsers[0]) => {
     const userDiklats = allDiklat.filter(d => d.user_id === auditor.id);
-    
-    const competencies = userDiklats.map(d => ({
-      id: d.id,
-      year: d.tahun,
-      type: d.jenis,
-      name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
-            (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
-      status: d.tanggal_expired ? calculateStatus(d.tanggal_expired) : 'DIRENCANAKAN',
-      certNumber: d.nomor_sertifikat || '-',
-      fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
-      isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
-      isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
-    }));
+
+    const competencies = userDiklats.map((d: any) => {
+      let stat = 'DIRENCANAKAN';
+      if (d.tanggal_expired && d.tanggal_expired !== '-') {
+        stat = calculateStatus(d.tanggal_expired);
+      } else if (d.sertifikat_path) {
+        stat = 'Berlaku Selamanya';
+      }
+
+      return {
+        id: d.id,
+        year: d.tahun,
+        type: d.jenis,
+        kategori: d.kategori_sertifikat || 'Sertifikat Kepesertaan',
+        name: (d.realisasi_diklat && d.realisasi_diklat !== '-') ? d.realisasi_diklat : 
+              (d.rencana_diklat && d.rencana_diklat !== '-') ? d.rencana_diklat : '-',
+        status: stat,
+        certNumber: d.nomor_sertifikat || '-',
+        fileLink: d.sertifikat_path ? `${STORAGE_URL}/${d.sertifikat_path}` : null,
+        isPlanned: !!d.rencana_diklat && d.rencana_diklat !== '-', 
+        isRealized: !!d.realisasi_diklat && d.realisasi_diklat !== '-' 
+      };
+    });
 
     setSelectedProfile({
       id: auditor.id,
@@ -550,7 +577,8 @@ export default function PenugasanAudit() {
         const validComps = allComps.filter((c: any) => c.status !== 'DIRENCANAKAN');
         const totalValid = validComps.length;
 
-        const countAktif = validComps.filter((c: any) => c.status === 'Aktif').length;
+        // Perhitungan: sertifikat dengan status 'Berlaku Selamanya' dihitung sebagai Aktif
+        const countAktif = validComps.filter((c: any) => c.status === 'Aktif' || c.status === 'Berlaku Selamanya').length;
         const aktifPercent = totalValid > 0 ? Math.round((countAktif / totalValid) * 100) : 0;
 
         const countHampirExpired = validComps.filter((c: any) => c.status === 'Hampir Expired').length;
@@ -658,12 +686,13 @@ export default function PenugasanAudit() {
                     <table className="w-full text-sm text-left">
                       <thead className="bg-[#1e3a8a] text-white">
                         <tr>
-                          <th className="px-6 py-4 font-semibold text-center w-1/3">Nama Program / Sertifikat</th>
-                          <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
-                          <th className="px-6 py-4 font-semibold text-center">Tahun</th>
-                          <th className="px-6 py-4 font-semibold text-center">Status</th>
-                          <th className="px-6 py-4 font-semibold text-center">File</th>
-                        </tr>
+                            <th className="px-6 py-4 font-semibold text-center w-1/3">Nama Program / Sertifikat</th>
+                            <th className="px-6 py-4 font-semibold text-center">Jenis Program</th>
+                            <th className="px-6 py-4 font-semibold text-center">Kategori</th>
+                            <th className="px-6 py-4 font-semibold text-center">Tahun</th>
+                            <th className="px-6 py-4 font-semibold text-center">Status</th>
+                            <th className="px-6 py-4 font-semibold text-center">File</th>
+                          </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
                         {allComps.map((c: any) => {
@@ -673,6 +702,8 @@ export default function PenugasanAudit() {
 
                           if (c.status === 'Aktif') {
                             badgeStyle = "bg-green-100 text-green-700";
+                          } else if (c.status === 'Berlaku Selamanya') {
+                            badgeStyle = "bg-emerald-100 text-emerald-700";
                           } else if (c.status === 'Hampir Expired') {
                             badgeStyle = "bg-amber-100 text-amber-700";
                           } else if (c.status === 'Expired') {
@@ -691,6 +722,11 @@ export default function PenugasanAudit() {
                             <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4 font-medium text-gray-800">{c.name}</td>
                               <td className="px-6 py-4 text-center text-gray-600">{c.type}</td>
+                              <td className="px-6 py-4 text-center text-gray-600">
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${c.kategori === 'Sertifikat Profesi' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>
+                                  {c.kategori ? c.kategori.replace('Sertifikat ', '') : 'Kepesertaan'}
+                                </span>
+                              </td>
                               <td className="px-6 py-4 text-center text-gray-600">{c.year}</td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badgeStyle}`}>
