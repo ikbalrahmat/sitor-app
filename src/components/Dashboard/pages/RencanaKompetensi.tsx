@@ -74,9 +74,10 @@ export default function RencanaKompetensi() {
   // ==========================================
   const fetchData = async () => {
     try {
-      const [usersRes, diklatRes] = await Promise.all([
+      const [usersRes, diklatRes, penugasanRes] = await Promise.all([
         api.get('/users'),
-        api.get('/diklat')
+        api.get('/diklat'),
+        api.get('/penugasan-kompetensi').catch(() => ({ data: [] }))
       ]);
 
       const targetUsers = usersRes.data.filter((u: any) => {
@@ -86,40 +87,56 @@ export default function RencanaKompetensi() {
         return u.role === 'User' || u.role === 'Manajemen'; // Admin sees all audience
       });
 
+      // Build auditStatusMap and auditReqMap from API
+      const auditStatusMap: any = {};
+      const auditReqMap: any = {};
+      
+      if (penugasanRes.data && penugasanRes.data.length > 0) {
+        penugasanRes.data.forEach((item: any) => {
+          if (!auditReqMap[item.unit_kerja]) auditReqMap[item.unit_kerja] = [];
+          auditReqMap[item.unit_kerja].push({
+            id: item.id.toString(),
+            name: item.nama_penugasan
+          });
+
+          if (item.evaluations && item.evaluations.length > 0) {
+            item.evaluations.forEach((ev: any) => {
+              if (!auditStatusMap[item.unit_kerja]) auditStatusMap[item.unit_kerja] = {};
+              if (!auditStatusMap[item.unit_kerja][item.id.toString()]) auditStatusMap[item.unit_kerja][item.id.toString()] = {};
+              auditStatusMap[item.unit_kerja][item.id.toString()][ev.user_id] = ev.status;
+            });
+          }
+        });
+      }
+
       const mergedData = targetUsers.map((user: any) => {
         const userDiklats = diklatRes.data.filter((d: any) => Number(d.user_id) === Number(user.id));
         
         let statusKelayakan = '-';
         let detailTopikBermasalah: string[] = [];
-        try {
-          const auditStatusStr = localStorage.getItem('penugasanAuditStatus');
-          const auditReqStr = localStorage.getItem('kompetensiWajibMap');
-          if (auditStatusStr && auditReqStr) {
-            const auditStatusMap = JSON.parse(auditStatusStr);
-            const auditReqMap = JSON.parse(auditReqStr);
-            const userStatuses = [];
-            for (const unit in auditStatusMap) {
-              for (const subAudit in auditStatusMap[unit]) {
-                const status = auditStatusMap[unit][subAudit][user.id];
-                if (status) {
-                  userStatuses.push(status);
-                  if (status === 'Perlu Penguatan' || status === 'Tidak Direkomendasikan') {
-                    const reqList = auditReqMap[unit] || [];
-                    const reqObj = reqList.find((r: any) => String(r.id) === String(subAudit));
-                    if (reqObj && !detailTopikBermasalah.includes(reqObj.name)) {
-                      detailTopikBermasalah.push(reqObj.name);
-                    }
-                  }
+        
+        const userStatuses = [];
+        for (const unit in auditStatusMap) {
+          for (const subAudit in auditStatusMap[unit]) {
+            const status = auditStatusMap[unit][subAudit][user.id];
+            if (status) {
+              userStatuses.push(status);
+              if (status === 'Perlu Penguatan' || status === 'Tidak Direkomendasikan') {
+                const reqList = auditReqMap[unit] || [];
+                const reqObj = reqList.find((r: any) => String(r.id) === String(subAudit));
+                if (reqObj && !detailTopikBermasalah.includes(reqObj.name)) {
+                  detailTopikBermasalah.push(reqObj.name);
                 }
               }
             }
-            if (userStatuses.length > 0) {
-              if (userStatuses.includes('Tidak Direkomendasikan')) statusKelayakan = 'Tidak Direkomendasikan';
-              else if (userStatuses.includes('Perlu Penguatan')) statusKelayakan = 'Perlu Penguatan';
-              else if (userStatuses.includes('Layak Ditugaskan')) statusKelayakan = 'Layak Ditugaskan';
-            }
           }
-        } catch(e) {}
+        }
+        
+        if (userStatuses.length > 0) {
+          if (userStatuses.includes('Tidak Direkomendasikan')) statusKelayakan = 'Tidak Direkomendasikan';
+          else if (userStatuses.includes('Perlu Penguatan')) statusKelayakan = 'Perlu Penguatan';
+          else if (userStatuses.includes('Layak Ditugaskan')) statusKelayakan = 'Layak Ditugaskan';
+        }
         
         const formattedDiklats = userDiklats.map((d: any) => ({
           id: d.id,

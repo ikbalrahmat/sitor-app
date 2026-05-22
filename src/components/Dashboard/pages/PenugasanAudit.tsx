@@ -128,8 +128,11 @@ export default function PenugasanAudit() {
       setAllDiklat(diklatRes.data);
 
       // Konversi data API penugasan ke format kompetensiWajibMap
+      let mapFromAPI: Record<string, SubAudit[]> = {};
+      let evalStatuses: Record<string, Record<string, Record<string | number, StatusKelayakan>>> = {};
+      let ketMap: Record<string, Record<string, Record<string | number, string>>> = {};
+
       if (penugasanRes.data && penugasanRes.data.length > 0) {
-        const mapFromAPI: Record<string, SubAudit[]> = {};
         penugasanRes.data.forEach((item: any) => {
           if (!mapFromAPI[item.unit_kerja]) {
             mapFromAPI[item.unit_kerja] = [];
@@ -139,8 +142,45 @@ export default function PenugasanAudit() {
             name: item.nama_penugasan,
             kriteria: item.kriteria || 'Tidak ada keterangan/kriteria khusus.'
           });
+
+          // Extract evaluations if available
+          if (item.evaluations && item.evaluations.length > 0) {
+            item.evaluations.forEach((ev: any) => {
+              if (!evalStatuses[item.unit_kerja]) evalStatuses[item.unit_kerja] = {};
+              if (!evalStatuses[item.unit_kerja][item.id.toString()]) evalStatuses[item.unit_kerja][item.id.toString()] = {};
+              evalStatuses[item.unit_kerja][item.id.toString()][ev.user_id] = ev.status;
+
+              if (!ketMap[item.unit_kerja]) ketMap[item.unit_kerja] = {};
+              if (!ketMap[item.unit_kerja][item.id.toString()]) ketMap[item.unit_kerja][item.id.toString()] = {};
+              ketMap[item.unit_kerja][item.id.toString()][ev.user_id] = ev.keterangan || '';
+            });
+          }
         });
         setKompetensiWajibMap(mapFromAPI);
+        
+        // Merge with existing states (API takes priority)
+        setEvaluationStatuses(prev => {
+          const merged = { ...prev, ...evalStatuses };
+          localStorage.setItem('penugasanAuditStatus', JSON.stringify(merged));
+          return merged;
+        });
+
+        setKeteranganMap(prev => {
+          const merged = { ...prev, ...ketMap };
+          localStorage.setItem('keteranganMap', JSON.stringify(merged));
+          return merged;
+        });
+      } else {
+        // Fallback: coba load dari localStorage jika API endpoint belum tersedia
+        const savedReqsStr = localStorage.getItem('kompetensiWajibMap');
+        if (savedReqsStr) {
+          try {
+            mapFromAPI = JSON.parse(savedReqsStr);
+            setKompetensiWajibMap(mapFromAPI);
+          } catch (e) {
+            console.warn('Gagal parse kompetensiWajibMap dari localStorage', e);
+          }
+        }
       }
 
       const uniqueUnits: string[] = Array.from(new Set(users.map((u: any) => u.unit_kerja).filter(Boolean)));
@@ -156,7 +196,7 @@ export default function PenugasanAudit() {
     }
   };
 
-  const handleStatusChange = (auditorId: string | number, newStatus: StatusKelayakan) => {
+  const handleStatusChange = async (auditorId: string | number, newStatus: StatusKelayakan) => {
     if (!selectedSubAudit) return;
     const updatedStatuses = { ...evaluationStatuses };
     if (!updatedStatuses[selectedAudit]) updatedStatuses[selectedAudit] = {};
@@ -166,9 +206,17 @@ export default function PenugasanAudit() {
     
     setEvaluationStatuses(updatedStatuses);
     localStorage.setItem('penugasanAuditStatus', JSON.stringify(updatedStatuses));
+
+    try {
+      await api.post(`/audit-topics/${selectedSubAudit}/evaluations/${auditorId}`, {
+        status: newStatus
+      });
+    } catch (error) {
+      console.error('Failed to save status to server', error);
+    }
   };
 
-  const handleKeteranganChange = (auditorId: string | number, text: string) => {
+  const handleKeteranganChange = async (auditorId: string | number, text: string) => {
     if (!selectedSubAudit) return;
     const updatedKeterangan = { ...keteranganMap };
     if (!updatedKeterangan[selectedAudit]) updatedKeterangan[selectedAudit] = {};
@@ -178,6 +226,14 @@ export default function PenugasanAudit() {
     
     setKeteranganMap(updatedKeterangan);
     localStorage.setItem('keteranganMap', JSON.stringify(updatedKeterangan));
+
+    try {
+      await api.post(`/audit-topics/${selectedSubAudit}/evaluations/${auditorId}`, {
+        keterangan: text
+      });
+    } catch (error) {
+      console.error('Failed to save keterangan to server', error);
+    }
   };
 
   useEffect(() => {
@@ -232,15 +288,22 @@ export default function PenugasanAudit() {
         }))
       };
 
-      // Simpan ke backend
-      await api.post('/penugasan-kompetensi', payload);
+      // Coba simpan ke backend
+      try {
+        await api.post('/penugasan-kompetensi', payload);
+        console.log('Data berhasil disimpan ke server');
+      } catch (apiError) {
+        console.warn('Gagal menyimpan ke server, menggunakan localStorage sebagai backup', apiError);
+        // Fallback: simpan ke localStorage jika API gagal
+        localStorage.setItem('kompetensiWajibMap', JSON.stringify({ ...kompetensiWajibMap, [selectedAudit]: tempReqs }));
+      }
 
       // Update state lokal
       const updatedMap = { ...kompetensiWajibMap, [selectedAudit]: tempReqs };
       setKompetensiWajibMap(updatedMap);
       
       setShowEditReqModal(false);
-      alert('Topik Penugasan Audit berhasil disimpan ke server.');
+      alert('Topik Penugasan Audit berhasil disimpan.');
     } catch (error) {
       console.error('Gagal menyimpan penugasan kompetensi', error);
       alert('Gagal menyimpan data. Silakan coba lagi.');
